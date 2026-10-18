@@ -1,7 +1,7 @@
 'use client';
 import { useState } from 'react';
 
-const NAMES = ['Suman', 'Dinesh', 'Ajeet', 'Siraj', 'Sunil'];
+const NAMES = ['Suman', 'Dinesh', 'Ajeet', 'Siraj', 'Sunil', 'Pandey ji'];
 
 export default function Login() {
   const [name, setName] = useState(NAMES[0]);
@@ -23,7 +23,8 @@ export default function Login() {
       if (!r.ok) throw new Error(j.error || 'error');
       localStorage.setItem('wa_name', j.name);
       localStorage.setItem('wa_token', j.token);
-      location.href = '/home';
+      // Pandey ji goes straight to the motor app; everyone else to Home
+      location.href = j.name === 'Pandey ji' ? '/motor' : '/home';
     } catch (e) {
       setErr(e.message);
       setBusy(false);
@@ -47,3 +48,4 @@ export default function Login() {
     </div>
   );
 }
+
