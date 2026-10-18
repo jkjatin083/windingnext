@@ -1,6 +1,6 @@
 // POST /api/login - contractor name + PIN. Same PIN store (wa_users) and
 // same token format as the live app, so existing PINs work unchanged.
-import { db, WHO, sign, hashPin, safeEq } from '../../../lib/core';
+import { db, LOGIN_WHO, sign, hashPin, safeEq } from '../../../lib/core';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -9,7 +9,7 @@ export async function POST(req) {
   try {
     const b = await req.json().catch(() => ({}));
     const name = String(b.name || '').trim(), pin = String(b.pin || '').trim();
-    if (!WHO.includes(name)) return Response.json({ error: 'Wrong name or PIN' }, { status: 401 });
+    if (!LOGIN_WHO.includes(name)) return Response.json({ error: 'Wrong name or PIN' }, { status: 401 });
     const sql = db();
     const rows = await sql`SELECT * FROM wa_users WHERE name = ${name}`;
     const row = rows[0];
@@ -37,3 +37,4 @@ export async function POST(req) {
     return Response.json({ error: String(e.message || e) }, { status: 500 });
   }
 }
+

@@ -13,7 +13,10 @@ const ic = {
   hisab: <path d="M4 18V9M11 18V4M18 18v-6"/>,
   make: <><circle cx="11" cy="11" r="9"/><path d="M11 6v10M6 11h10"/></>,
   dispatch: <path d="M4 11h14M13 6l5 5-5 5"/>,
-  report: <path d="M4 18V9M11 18V4M18 18v-6"/>
+  report: <path d="M4 18V9M11 18V4M18 18v-6"/>,
+  new: <path d="M11 4v14M4 11h14"/>,
+  orders: <><path d="M5 4h12v14H5z"/><path d="M8 8h6M8 12h6"/></>,
+  status: <path d="M3 11h4l3-6 4 12 3-6h2"/>
 };
 
 const BASE = [
@@ -27,9 +30,17 @@ const MOTOR = [
   { href: '/report', label: 'Report', icon: ic.report }
 ];
 
+const SALE = [
+  { href: '/sale', label: 'Overview', icon: ic.home },
+  { href: '/sale-new', label: 'New order', icon: ic.new },
+  { href: '/orders', label: 'Orders', icon: ic.orders },
+  { href: '/status', label: 'Status', icon: ic.status }
+];
+
 function itemsFor(name) {
   if (name === 'Pandey ji') return MOTOR;
   if (name === 'Sunil') return [...BASE, ...MOTOR];
+  if (name === 'Sandeep') return SALE;
   return BASE;
 }
 

@@ -215,7 +215,7 @@ export default function MotorMake() {
           </div>
         </>
       ) : null}
-      <div className="sticky"><div>
+      <div className="sticky" style={{ bottom: 70 }}><div>
         <div className="err">{serr || pr || po || ''}</div>
         <button className="btn" disabled={busy || !M || !!pr || !!po} onClick={save}>Save motors made</button>
       </div></div>

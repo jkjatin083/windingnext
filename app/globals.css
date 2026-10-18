@@ -46,3 +46,42 @@ a.lo{display:block;color:var(--mute);font-size:12px;text-decoration:none;margin-
 .big{font-size:40px;font-weight:700;letter-spacing:-.02em;color:var(--a)}
 #toast{position:fixed;top:10px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 20px;border-radius:30px;z-index:9;font-size:14px}
 .ab{display:flex;gap:10px;margin-bottom:12px}.ab .btn{padding:15px;font-size:15px}
+
+
+/* Sale order app (phase 4) */
+.sub{color:var(--mute);font-size:13px;margin:-8px 0 14px}
+.tag{font-size:11px;font-weight:600;border-radius:20px;padding:3px 9px;background:#eef0f3;color:var(--mute);white-space:nowrap}
+.tag.g{background:var(--a2);color:var(--a)}.tag.a{background:var(--amb2);color:var(--amb)}
+.row>span{font-weight:700;color:var(--a);font-size:17px;font-variant-numeric:tabular-nums}
+.row.f{border-top:0;padding-top:0}
+.row.ty{padding:6px 0 6px 12px;border-top:1px dashed var(--line)}.row.ty b{font-size:13px;font-weight:500;color:var(--mute)}.row.ty>span{font-size:13px}
+.row small.old{color:var(--amb)}
+.inp{border:1.5px solid var(--line);border-radius:14px;padding:12px 14px;font-size:15px;background:#fff;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;cursor:pointer}
+.inp small{color:var(--mute);font-size:12px;display:block;margin-bottom:2px}.inp .ph{color:#98a2b3}.inp span.c{color:var(--mute)}
+input.f{width:100%;font:inherit;font-size:15px;border:1.5px solid var(--line);border-radius:14px;padding:12px 14px;background:#fff;outline:none;margin-bottom:10px;color:var(--ink)}
+input.f:focus{border-color:var(--a)}
+.fl small{color:var(--mute);font-size:12px;display:block;margin:0 0 4px 2px}
+.addm{text-align:center;color:var(--a);font-weight:700;box-shadow:0 0 0 1.5px var(--a);background:var(--a2);padding:14px;border-radius:20px;margin-bottom:12px;cursor:pointer}
+.lnk{color:var(--mute);font-size:12px;font-weight:600;cursor:pointer;background:none;border:0;font-family:inherit}.lnk.g{color:var(--a)}
+.tabs{display:flex;gap:6px;margin-bottom:14px}
+.tabs button{padding:8px 13px;border-radius:20px;font:inherit;font-size:13px;font-weight:600;color:var(--mute);background:#fff;border:1px solid var(--line);cursor:pointer}
+.tabs button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.good{background:var(--a2);color:#0b6e5a;border-radius:14px;padding:12px 14px;font-size:13px;margin-bottom:12px}
+.tl{margin-top:14px}.tl .s{display:flex;gap:12px;padding-bottom:14px;position:relative}
+.tl .s:before{content:"";position:absolute;left:10px;top:22px;bottom:0;width:2px;background:#e4e7ec}
+.tl .s.d:before{background:var(--a)}.tl .s:last-child:before{display:none}.tl .s:last-child{padding-bottom:0}
+.tl i{width:22px;height:22px;border-radius:50%;background:#eef0f3;flex:none;font-style:normal;text-align:center;line-height:22px;font-size:11px;font-weight:700;color:var(--mute)}
+.tl .d i{background:var(--a);color:#fff}.tl .c i{background:#fff;border:2px solid var(--a);color:var(--a);line-height:18px}
+.tl .x{flex:1;display:flex;justify-content:space-between;font-size:13.5px;gap:8px}
+.tl .x b{font-weight:600}.tl .x small{display:block;color:var(--mute);font-size:12px;margin-top:1px}
+.tl .x span{font-weight:700;font-variant-numeric:tabular-nums;font-size:13.5px;white-space:nowrap}.tl .x span.m{color:var(--mute);font-weight:500}
+.ov{position:fixed;inset:0;background:rgba(16,24,40,.4);display:flex;align-items:flex-end;justify-content:center;z-index:30}
+.sheet{background:#fff;width:100%;max-width:460px;border-radius:24px 24px 0 0;padding:20px}
+.opt{display:flex;justify-content:space-between;padding:13px 14px;border-radius:14px;border:1.5px solid var(--line);margin-bottom:8px;cursor:pointer;font-size:15px}
+.opt.on{border-color:var(--a);background:var(--a2);font-weight:700}
+label.l{display:block;font-size:11.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--mute);margin:14px 0 6px}
+.btn.s{width:auto;font-size:14px;padding:9px 16px;border-radius:12px}
+.btn.o{background:#fff;color:var(--ink);border:1px solid var(--line)}
+.sg{max-height:320px;overflow-y:auto;position:absolute;left:0;right:0;top:100%;margin-top:-6px;background:#fff;border:1.5px solid var(--line);border-radius:14px;box-shadow:0 8px 24px rgba(15,23,42,.12);z-index:5}
+.sg div{padding:12px 14px;font-size:15px;border-top:1px solid var(--line)}.sg div:first-child{border-top:0}
+.sg div small{display:inline;color:var(--mute);font-size:12px;margin:0 0 0 8px}
