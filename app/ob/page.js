@@ -1,5 +1,6 @@
 'use client';
 // Admin Order Book - Overview. Port of the live orderbook.html overview tab.
+import Link from 'next/link';
 import { useApi } from '../../components/store';
 import Nav from '../../components/nav';
 import Top from '../../components/top';
@@ -31,7 +32,10 @@ export default function ObOverview() {
   return (
     <div className="w">
       <Top date={dm(todayIST())} />
-      <h1>Overview</h1>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <h1 style={{ margin: '4px 0 10px' }}>Overview</h1>
+        <Link href="/admin" className="lnk">PIN &amp; users</Link>
+      </div>
       {err ? <div className="card"><div className="err">{err}</div></div> : null}
       {!D && !err ? <div className="card"><div className="note">Loading...</div></div> : null}
       {D && O.error ? <div className="card"><div className="err">Could not load overview: {O.error}</div></div> : null}

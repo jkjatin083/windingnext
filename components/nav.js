@@ -43,7 +43,8 @@ const ADMIN = [
   { href: '/ob', label: 'Overview', icon: ic.home },
   { href: '/book', label: 'Order Book', icon: ic.orders },
   { href: '/demand', label: 'Contractors', icon: ic.entries },
-  { href: '/rotor', label: 'Rotor', icon: ic.rotor }
+  { href: '/rotor', label: 'Rotor', icon: ic.rotor },
+  { href: '/eadmin', label: 'Entries', icon: ic.entries }
 ];
 
 function itemsFor(name) {
