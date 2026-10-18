@@ -1,5 +1,8 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
+import { useApi, postJson } from '../../components/store';
+import Top from '../../components/top';
+import Link from 'next/link';
 
 const fmt = n => Number(n || 0).toLocaleString('en-IN');
 const dm = d => {
@@ -9,35 +12,13 @@ const dm = d => {
 };
 
 export default function Made() {
-  const [H, setH] = useState(null);
+  const { data: H, err: loadErr, reload } = useApi('/api/home');
   const [err, setErr] = useState('');
-  const [me, setMe] = useState('');
   const [issueId, setIssueId] = useState(null);
-  const [open, setOpen] = useState(null); // opening-stock stamping name, or null
+  const [open, setOpen] = useState(null);
   const [qty, setQty] = useState('');
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState('');
-
-  function token() { return localStorage.getItem('wa_token'); }
-
-  function load() {
-    const TOKEN = token();
-    if (!TOKEN) { location.href = '/'; return; }
-    return fetch('/api/home', { headers: { Authorization: 'Bearer ' + TOKEN } })
-      .then(async r => {
-        if (r.status === 401) { localStorage.removeItem('wa_token'); location.href = '/'; return null; }
-        const j = await r.json();
-        if (!r.ok) throw new Error(j.error || 'error');
-        return j;
-      })
-      .then(j => { if (j) setH(j); })
-      .catch(e => setErr(e.message));
-  }
-
-  useEffect(() => {
-    setMe(localStorage.getItem('wa_name') || '');
-    load();
-  }, []);
 
   function showToast(t) { setToast(t); setTimeout(() => setToast(''), 2500); }
 
@@ -49,23 +30,16 @@ export default function Made() {
     if (!(q > 0) || q !== Math.floor(q)) { setErr('Enter a whole number above 0'); return; }
     setBusy(true);
     try {
-      const r = await fetch('/api/entry', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token() },
-        body: JSON.stringify({ action: 'made', stype, qty: q, issue_id: effOpen ? null : (shownCur && shownCur.id), opening: effOpen ? 1 : 0 })
-      });
-      const j = await r.json();
-      if (!r.ok) throw new Error(j.error || 'error');
+      await postJson('/api/entry', { action: 'made', stype, qty: q, issue_id: effOpen ? null : (shownCur && shownCur.id), opening: effOpen ? 1 : 0 });
       showToast('Saved');
       setQty('');
-      await load();
+      await reload();
     } catch (e) { setErr(e.message); }
     setBusy(false);
   }
 
   const mi = H ? (H.issues || []).filter(i => i.left > 0) : [];
   const oth = H ? Object.keys(H.holds || {}).filter(k => (H.holds[k].held || 0) > 0 && !mi.some(i => i.stator_type === k)).sort() : [];
-  // current selection: an order tile, or an opening-stock tile
   const cur = open ? null : (mi.find(i => i.id === issueId) || mi[0] || null);
   const effOpen = open || (!cur && oth.length ? oth[0] : null);
   const shownCur = effOpen ? null : cur;
@@ -77,15 +51,10 @@ export default function Made() {
   return (
     <div className="w">
       {toast ? <div id="toast" style={{ display: 'block' }}>{toast}</div> : null}
-      <div className="top">
-        <div className="who"><div className="av">{(me || '?')[0]}</div><div><small>Hello</small><b>{me}</b></div></div>
-        <div style={{ textAlign: 'right' }}>
-          <div className="chipd">{H ? dm(H.today) : ''}</div>
-          <a className="lo" href="/home">Back</a>
-        </div>
-      </div>
+      <Top date={H ? dm(H.today) : ''} />
       <h1>Made today</h1>
-      {!H && !err ? <div className="card"><div className="note">Loading...</div></div> : null}
+      {loadErr ? <div className="card"><div className="err">{loadErr}</div></div> : null}
+      {!H && !loadErr ? <div className="card"><div className="note">Loading...</div></div> : null}
       {H ? (
         <>
           {od ? (
@@ -141,6 +110,7 @@ export default function Made() {
       <div className="sticky"><div>
         <div className="err">{err}</div>
         <button className="btn" disabled={busy || !H} onClick={save}>Save</button>
+        <div style={{ textAlign: 'center', marginTop: 8 }}><Link className="lo" href="/home">Back to Home</Link></div>
       </div></div>
     </div>
   );
