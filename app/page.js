@@ -28,7 +28,7 @@ export default function Login() {
       location.href = j.name === 'Pandey ji' ? '/motor'
         : j.name === 'Sandeep' ? '/sale'
         : j.name === 'Admin' ? '/ob'
-        : '/home';
+        : '/made';
     } catch (e) {
       setErr(e.message);
       setBusy(false);

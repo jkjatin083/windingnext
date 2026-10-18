@@ -22,14 +22,14 @@ const ic = {
 };
 
 const BASE = [
-  { href: '/home', label: 'Home', icon: ic.home },
-  { href: '/entries', label: 'Entries', icon: ic.entries },
-  { href: '/hisab', label: 'Hisab', icon: ic.hisab }
+  { href: '/made', label: 'Made', icon: ic.make },
+  { href: '/give', label: 'Give', icon: ic.dispatch },
+  { href: '/report', label: 'Report', icon: ic.report }
 ];
 const MOTOR = [
   { href: '/motor', label: 'Make', icon: ic.make },
   { href: '/dispatch', label: 'Dispatch', icon: ic.dispatch },
-  { href: '/report', label: 'Report', icon: ic.report }
+  { href: '/mreport', label: 'Report', icon: ic.report }
 ];
 
 const SALE = [
@@ -50,7 +50,7 @@ const ADMIN = [
 function itemsFor(name) {
   if (name === 'Admin') return ADMIN;
   if (name === 'Pandey ji') return MOTOR;
-  if (name === 'Sunil') return [...BASE, ...MOTOR];
+  if (name === 'Sunil') return [...BASE, ...MOTOR.map((t, i) => i === 2 ? { ...t, label: 'Hisaab' } : t)];
   if (name === 'Sandeep') return SALE;
   return BASE;
 }
