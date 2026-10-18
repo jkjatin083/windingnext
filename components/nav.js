@@ -2,7 +2,8 @@
 // Shared bottom nav. Uses Next.js client-side links, so taps switch screens
 // without a page reload and the cached data shows instantly.
 // Tabs depend on who is logged in: App 1 contractors get Home/Entries/Hisab,
-// Pandey ji gets the motor app (Make/Dispatch/Report), Sunil gets both.
+// Pandey ji gets the motor app (Make/Dispatch/Report), Sunil gets both,
+// Sandeep gets the sale order app, Admin gets the order book.
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -16,7 +17,8 @@ const ic = {
   report: <path d="M4 18V9M11 18V4M18 18v-6"/>,
   new: <path d="M11 4v14M4 11h14"/>,
   orders: <><path d="M5 4h12v14H5z"/><path d="M8 8h6M8 12h6"/></>,
-  status: <path d="M3 11h4l3-6 4 12 3-6h2"/>
+  status: <path d="M3 11h4l3-6 4 12 3-6h2"/>,
+  rotor: <><circle cx="11" cy="11" r="8"/><path d="M11 3v4M11 15v4M3 11h4M15 11h4"/></>
 };
 
 const BASE = [
@@ -37,7 +39,15 @@ const SALE = [
   { href: '/status', label: 'Status', icon: ic.status }
 ];
 
+const ADMIN = [
+  { href: '/ob', label: 'Overview', icon: ic.home },
+  { href: '/book', label: 'Order Book', icon: ic.orders },
+  { href: '/demand', label: 'Contractors', icon: ic.entries },
+  { href: '/rotor', label: 'Rotor', icon: ic.rotor }
+];
+
 function itemsFor(name) {
+  if (name === 'Admin') return ADMIN;
   if (name === 'Pandey ji') return MOTOR;
   if (name === 'Sunil') return [...BASE, ...MOTOR];
   if (name === 'Sandeep') return SALE;

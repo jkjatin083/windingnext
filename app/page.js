@@ -1,7 +1,7 @@
 'use client';
 import { useState } from 'react';
 
-const NAMES = ['Suman', 'Dinesh', 'Ajeet', 'Siraj', 'Sunil', 'Pandey ji', 'Sandeep'];
+const NAMES = ['Suman', 'Dinesh', 'Ajeet', 'Siraj', 'Sunil', 'Pandey ji', 'Sandeep', 'Admin'];
 
 export default function Login() {
   const [name, setName] = useState(NAMES[0]);
@@ -23,8 +23,12 @@ export default function Login() {
       if (!r.ok) throw new Error(j.error || 'error');
       localStorage.setItem('wa_name', j.name);
       localStorage.setItem('wa_token', j.token);
-      // Pandey ji goes straight to the motor app, Sandeep to sale orders; everyone else to Home
-      location.href = j.name === 'Pandey ji' ? '/motor' : (j.name === 'Sandeep' ? '/sale' : '/home');
+      // Each role lands on its own app: Pandey ji -> motor, Sandeep -> sale,
+      // Admin -> order book, everyone else -> Home
+      location.href = j.name === 'Pandey ji' ? '/motor'
+        : j.name === 'Sandeep' ? '/sale'
+        : j.name === 'Admin' ? '/ob'
+        : '/home';
     } catch (e) {
       setErr(e.message);
       setBusy(false);
@@ -48,4 +52,3 @@ export default function Login() {
     </div>
   );
 }
-

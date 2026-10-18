@@ -1,5 +1,6 @@
-// POST /api/login - contractor name + PIN. Same PIN store (wa_users) and
-// same token format as the live app, so existing PINs work unchanged.
+// POST /api/login - name + PIN. Contractors use the wa_users PIN store
+// (same as the live app). Admin uses the ADMIN_PIN environment variable
+// and gets an ADMIN token (12 hours), same as the live admin page.
 import { db, LOGIN_WHO, sign, hashPin, safeEq } from '../../../lib/core';
 
 export const runtime = 'nodejs';
@@ -9,6 +10,16 @@ export async function POST(req) {
   try {
     const b = await req.json().catch(() => ({}));
     const name = String(b.name || '').trim(), pin = String(b.pin || '').trim();
+
+    // Admin: PIN lives in the ADMIN_PIN environment variable (Vercel
+    // Project Settings -> Environment Variables), not in the database.
+    if (name === 'Admin') {
+      const want = String(process.env.ADMIN_PIN || '').trim();
+      if (!want) return Response.json({ error: 'Admin PIN is not set on this app yet. Add ADMIN_PIN in Vercel.' }, { status: 401 });
+      if (pin !== want) return Response.json({ error: 'Wrong name or PIN' }, { status: 401 });
+      return Response.json({ token: sign('ADMIN', 12), name: 'Admin' });
+    }
+
     if (!LOGIN_WHO.includes(name)) return Response.json({ error: 'Wrong name or PIN' }, { status: 401 });
     const sql = db();
     const rows = await sql`SELECT * FROM wa_users WHERE name = ${name}`;
@@ -37,4 +48,3 @@ export async function POST(req) {
     return Response.json({ error: String(e.message || e) }, { status: 500 });
   }
 }
-
