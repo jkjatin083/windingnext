@@ -44,7 +44,8 @@ const ADMIN = [
   { href: '/book', label: 'Order Book', icon: ic.orders },
   { href: '/demand', label: 'Contractors', icon: ic.entries },
   { href: '/rotor', label: 'Rotor', icon: ic.rotor },
-  { href: '/eadmin', label: 'Entries', icon: ic.entries }
+  { href: '/eadmin', label: 'Entries', icon: ic.entries },
+  { href: '/wtypes', label: 'Types', icon: ic.new }
 ];
 
 function itemsFor(name) {
@@ -70,3 +71,4 @@ export default function Nav() {
     </nav>
   );
 }
+

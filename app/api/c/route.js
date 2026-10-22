@@ -25,6 +25,14 @@ async function stampTypes(sql, me, mid) {
   return [...set].sort();
 }
 
+// Winding types added by admin (Winding types tab) that this contractor can see
+async function addedFor(sql, me) {
+  try {
+    const r = await sql`SELECT name, who FROM wa_wtypes WHERE hidden = false ORDER BY name`;
+    return r.filter(x => x.who === '*' || String(x.who).split(',').includes(me)).map(x => x.name);
+  } catch (e) { return []; }
+}
+
 export async function GET(req) {
   const me = verify(req);
   if (!me || !WHO1.includes(me)) return Response.json({ error: 'Please log in' }, { status: 401 });
@@ -35,14 +43,15 @@ export async function GET(req) {
     const view = sp.get('view') || 'home';
     if (view === 'home') {
       const midP = midOut(sql).then(r => r, () => null);
-      const [iss, t, types, hold, stamp] = await Promise.all([
+      const [iss, t, types, hold, stamp, added] = await Promise.all([
         openIssues(sql, me),
         sql`SELECT COALESCE(SUM(qty),0)::float AS v FROM wa_entries WHERE deleted = false AND contractor = ${me} AND kind = 'wound' AND d = ${today}::date`,
         stampTypes(sql, me, midP),
         holds(sql, me),
-        stampStock(sql, me, midP).catch(() => ({}))
+        stampStock(sql, me, midP).catch(() => ({})),
+        addedFor(sql, me)
       ]);
-      return Response.json({ me, today, types, holds: hold, stamp, issues: iss.rows, issueErr: iss.err || null, madeToday: t[0].v });
+      return Response.json({ me, today, types, holds: hold, stamp, added, issues: iss.rows, issueErr: iss.err || null, madeToday: t[0].v });
     }
     if (view === 'report') {
       const from = /^\d{4}-\d{2}-\d{2}$/.test(sp.get('from') || '') ? sp.get('from') : START;
@@ -102,7 +111,7 @@ export async function POST(req) {
     let issue = null;
     const opening = kind === 'wound' && b.opening;
     if (opening) {
-      const hh = (await holds(sql, me))[stype];
+      const hh = (await holds(sql, me))[stype] || (await addedFor(sql, me)).includes(stype);
       if (!stype || !hh) return Response.json({ error: 'Choose the opening stock item' }, { status: 400 });
     }
     if (iss.rows.length && !opening) {
@@ -136,3 +145,4 @@ export async function POST(req) {
     return Response.json({ error: String(e.message || e) }, { status: 500 });
   }
 }
+

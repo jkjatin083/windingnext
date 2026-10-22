@@ -16,17 +16,21 @@ export default function Made() {
   const [toast, setToast] = useState('');
 
   const mi = H ? H.issues.filter(i => i.left > 0) : [];
-  const oth = H ? Object.keys(H.holds || {}).filter(k => (H.holds[k].held || 0) > 0 && !mi.some(i => i.stator_type === k)).sort().map(k => [k, H.holds[k].held]) : [];
-  // default selection: first open order, else first opening-stock item
+  const added = H ? (H.added || []) : [];
+  const oth = H ? Object.keys(H.holds || {}).filter(k => (H.holds[k].held || 0) > 0 && !mi.some(i => i.stator_type === k) && !added.includes(k)).sort().map(k => [k, H.holds[k].held]) : [];
+  // winding types added by admin (no order): shown even when the count is 0
+  const adm = added.filter(n => !mi.some(i => i.stator_type === n)).map(n => [n, Math.max(0, ((H.holds || {})[n] || { held: 0 }).held)]);
+  const all = [...oth, ...adm];
+  // default selection: first open order, else first opening-stock / admin-added item
   const cur = sel.open ? null : (mi.find(i => i.id === sel.issue) || mi[0] || null);
-  const open = sel.open && oth.find(o => o[0] === sel.open) ? sel.open : (!cur && oth.length ? oth[0][0] : sel.open);
+  const open = sel.open && all.find(o => o[0] === sel.open) ? sel.open : (!cur && all.length ? all[0][0] : sel.open);
   const od = open ? null : cur;
   const stype = open || (cur && cur.stator_type) || null;
 
   async function save() {
     setErr2('');
     const q = +qty;
-    if (!stype) { setErr2(mi.length || oth.length ? 'Choose the order' : 'No order issued'); return; }
+    if (!stype) { setErr2(mi.length || all.length ? 'Choose the order' : 'No order issued'); return; }
     if (!(q > 0) || q !== Math.floor(q)) { setErr2('Enter a whole number above 0'); return; }
     setBusy(true);
     try {
@@ -64,7 +68,7 @@ export default function Made() {
               </div>
             )
           ) : null}
-          {!mi.length && !oth.length ? (
+          {!mi.length && !all.length ? (
             <div className="card"><div className="lab">Stators</div><div className="note">No order issued</div></div>
           ) : (
             <div className="card"><div className="lab">Stators</div>
@@ -91,6 +95,16 @@ export default function Made() {
                     <span className="n" style={{ color: '#0e9f83', fontWeight: 700 }}>{fmt(o[1])}</span>
                   </div>
                 ))}
+                {adm.length ? <div className="lab" style={{ marginTop: 14 }}>Added by admin (no order)</div> : null}
+                {adm.map(o => (
+                  <div key={o[0]} className={'tile' + (open === o[0] ? ' on' : '')} onClick={() => setSel({ issue: null, open: o[0] })}>
+                    <span className="r"></span>
+                    <div className="t"><b>{o[0]}</b>
+                      <small style={{ fontSize: 10, color: '#98a2b3', display: 'block', marginTop: 2 }}>Added by admin | stamping available 0</small>
+                    </div>
+                    <span className="n" style={{ color: '#0e9f83', fontWeight: 700 }}>{fmt(o[1])}</span>
+                  </div>
+                ))}
               </div>
             </div>
           )}
@@ -113,3 +127,4 @@ export default function Made() {
     </div>
   );
 }
+
