@@ -45,10 +45,26 @@ export async function POST(req) {
         if (!list.length) return Response.json({ error: 'Choose at least one contractor' }, { status: 400 });
         who = list.length === WHO1.length ? '*' : list.join(',');
       }
+      const cur = await sql`SELECT id, name FROM wa_wtypes WHERE id = ${id}`;
+      if (!cur.length) return Response.json({ error: 'Invalid type' }, { status: 400 });
+      const oldName = cur[0].name;
       const dup = await sql`SELECT id FROM wa_wtypes WHERE lower(name) = lower(${name}) AND id <> ${id} LIMIT 1`;
       if (dup.length) return Response.json({ error: 'This type is already in the list' }, { status: 409 });
       if (who === null) await sql`UPDATE wa_wtypes SET name = ${name} WHERE id = ${id}`;
       else await sql`UPDATE wa_wtypes SET name = ${name}, who = ${who} WHERE id = ${id}`;
+      // Carry the new name into the entries the contractors already made, so the
+      // old name does not stay behind as a second tile. Entries that belong to a
+      // sale order keep their order stamping type.
+      if (oldName !== name) {
+        try {
+          await sql`UPDATE wa_entries e SET stype = ${name}
+            WHERE e.stype = ${oldName} AND e.deleted = false
+              AND NOT EXISTS (SELECT 1 FROM ca_meta m WHERE m.entry_id = e.id)
+              AND NOT EXISTS (SELECT 1 FROM ca_orders o WHERE o.stator_type = e.stype)`;
+        } catch (e) {
+          await sql`UPDATE wa_entries SET stype = ${name} WHERE stype = ${oldName} AND deleted = false`;
+        }
+      }
       return Response.json({ ok: true });
     }
     if (b.action === 'hide' || b.action === 'show') {
