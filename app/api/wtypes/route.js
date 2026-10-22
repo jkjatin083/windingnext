@@ -1,5 +1,5 @@
-// GET/POST /api/wtypes - Admin only. List, add, hide/show winding types that
-// have no sale order. Contractors see the visible ones as tiles on Made.
+// GET/POST /api/wtypes - Admin only. List, add, edit, hide/show winding types
+// that have no sale order. Contractors see the visible ones as tiles on Made.
 import { db, verify } from '../../../lib/core';
 
 export const runtime = 'nodejs';
@@ -32,6 +32,23 @@ export async function POST(req) {
       const dup = await sql`SELECT id FROM wa_wtypes WHERE lower(name) = lower(${name}) LIMIT 1`;
       if (dup.length) return Response.json({ error: 'This type is already in the list' }, { status: 409 });
       await sql`INSERT INTO wa_wtypes (name, who) VALUES (${name}, ${who})`;
+      return Response.json({ ok: true });
+    }
+    if (b.action === 'edit') {
+      const id = parseInt(b.id, 10);
+      if (!id) return Response.json({ error: 'Invalid type' }, { status: 400 });
+      const name = String(b.name || '').trim().replace(/\s+/g, ' ').slice(0, 60);
+      if (!name) return Response.json({ error: 'Enter the winding type name' }, { status: 400 });
+      let who = null;
+      if (Array.isArray(b.who)) {
+        const list = b.who.filter(x => WHO1.includes(x));
+        if (!list.length) return Response.json({ error: 'Choose at least one contractor' }, { status: 400 });
+        who = list.length === WHO1.length ? '*' : list.join(',');
+      }
+      const dup = await sql`SELECT id FROM wa_wtypes WHERE lower(name) = lower(${name}) AND id <> ${id} LIMIT 1`;
+      if (dup.length) return Response.json({ error: 'This type is already in the list' }, { status: 409 });
+      if (who === null) await sql`UPDATE wa_wtypes SET name = ${name} WHERE id = ${id}`;
+      else await sql`UPDATE wa_wtypes SET name = ${name}, who = ${who} WHERE id = ${id}`;
       return Response.json({ ok: true });
     }
     if (b.action === 'hide' || b.action === 'show') {
