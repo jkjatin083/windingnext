@@ -42,6 +42,7 @@ export default function EAdmin() {
   const P = ER ? ER.pick : null;
   const issueList = P ? P.issues.filter(i => i.contractor === ae.contractor) : [];
   const openList = P ? P.opening.filter(i => i.contractor === ae.contractor) : [];
+  const addedList = P && P.added ? P.added.filter(i => i.contractor === ae.contractor) : [];
 
   return (
     <div className="w">
@@ -138,7 +139,7 @@ export default function EAdmin() {
             <label className="l">Stators</label>
             <div>
               {!ae.contractor ? <div style={{ color: 'var(--mute)', fontSize: 13 }}>Select contractor first</div> : null}
-              {ae.contractor && !issueList.length && !openList.length ? <div style={{ color: 'var(--mute)', fontSize: 13 }}>No order issued</div> : null}
+              {ae.contractor && !issueList.length && !openList.length && !addedList.length ? <div style={{ color: 'var(--mute)', fontSize: 13 }}>No order issued</div> : null}
               {issueList.map(i => (
                 <div key={i.id} className={'tile' + (ae.issue_id === i.id ? ' on' : '')} onClick={() => setAe({ ...ae, issue_id: i.id, opening_name: null })}>
                   <span className="r"></span>
@@ -156,6 +157,17 @@ export default function EAdmin() {
                   <div className="t2" style={{ flex: 1 }}>
                     <b style={{ fontSize: 15 }}>{i.name}</b>
                     <small style={{ display: 'block', fontSize: 10, color: '#98a2b3', marginTop: 2 }}>Opening stock | stamping available 0</small>
+                  </div>
+                  <span style={{ color: '#0e9f83', fontWeight: 700 }}>{fmt(i.avail)}</span>
+                </div>
+              ))}
+              {addedList.length ? <label className="l">Added by admin (no order)</label> : null}
+              {addedList.map(i => (
+                <div key={i.name} className={'tile' + (ae.opening_name === i.name ? ' on' : '')} onClick={() => setAe({ ...ae, opening_name: i.name, issue_id: null })}>
+                  <span className="r"></span>
+                  <div className="t2" style={{ flex: 1 }}>
+                    <b style={{ fontSize: 15 }}>{i.name}</b>
+                    <small style={{ display: 'block', fontSize: 10, color: '#98a2b3', marginTop: 2 }}>Added by admin | stamping available 0</small>
                   </div>
                   <span style={{ color: '#0e9f83', fontWeight: 700 }}>{fmt(i.avail)}</span>
                 </div>

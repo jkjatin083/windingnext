@@ -82,16 +82,16 @@ export async function GET(req) {
     if (/^\d{4}-\d{2}-\d{2}$/.test(q.from || '')) out = out.filter(r => r.d >= q.from);
     if (/^\d{4}-\d{2}-\d{2}$/.test(q.to || '')) out = out.filter(r => r.d <= q.to);
     let pickIssues = [], pickOpening = [];
+    const live = await liveRows(sql);
+    let mid = [];
+    try { mid = await sql`SELECT t.party_name, t.quantity::float AS q, i.name AS item FROM inventory_transactions t JOIN inventory_items i ON i.id = t.item_id
+        WHERE upper(t.transaction_type) = 'OUTWARD' AND i.category IN ('STAMPING', 'AIRY STAMPING') AND t.transaction_date >= ${START}::date`; } catch (er) { /* Midland not readable */ }
+    const sb = {}, hd = {};
+    const key = (c, t) => nz(c) + '|' + nz(t);
     try {
       pickIssues = await sql`SELECT i.id, i.contractor, o.order_no, o.winding_type, o.stator_type,
           (i.qty - COALESCE((SELECT SUM(e.qty) FROM ca_meta m JOIN wa_entries e ON e.id = m.entry_id WHERE m.issue_id = i.id AND e.deleted = false AND e.kind = 'wound'),0))::float AS left
         FROM ca_issues i JOIN ca_orders o ON o.id = i.order_id WHERE i.closed = false AND o.cancelled = false ORDER BY i.contractor, i.id`;
-      const live = await liveRows(sql);
-      let mid = [];
-      try { mid = await sql`SELECT t.party_name, t.quantity::float AS q, i.name AS item FROM inventory_transactions t JOIN inventory_items i ON i.id = t.item_id
-        WHERE upper(t.transaction_type) = 'OUTWARD' AND i.category IN ('STAMPING', 'AIRY STAMPING') AND t.transaction_date >= ${START}::date`; } catch (er) { /* Midland not readable */ }
-      const sb = {}, hd = {};
-      const key = (c, t) => nz(c) + '|' + nz(t);
       mid.forEach(x => { const c = CONTRACTORS.find(n => nz(n) === String(x.party_name || '').toLowerCase().replace(/[^a-z]/g, '')); if (c) sb[key(c, x.item)] = (sb[key(c, x.item)] || 0) + x.q; });
       live.forEach(r => {
         if (!r.stype) return;
@@ -108,7 +108,20 @@ export async function GET(req) {
       });
       pickIssues = pickIssues.map(i => ({ ...i, stamp: Math.max(0, sb[key(i.contractor, i.stator_type)] || 0), avail: Math.max(0, hd[key(i.contractor, i.stator_type)] || 0) }));
     } catch (er) { /* order tables missing */ }
-    return Response.json({ rows: out.slice(0, 200), people, types, total: out.length, pick: { contractors: CONTRACTORS, issues: pickIssues, opening: pickOpening.sort((a, b) => a.name.localeCompare(b.name)) } });
+    // Winding types added by admin (Types tab, no sale order) follow their own
+    // assigned contractors here, exactly like the tiles on the Made screen.
+    const pickAdded = [];
+    try {
+      const wt = await sql`SELECT name, who FROM wa_wtypes WHERE hidden = false`;
+      for (const w of wt) {
+        for (const c of (w.who === '*' ? CONTRACTORS.slice() : String(w.who).split(',').filter(x => CONTRACTORS.includes(x)))) {
+          if (pickIssues.some(i => i.contractor === c && i.left > 0 && nz(i.stator_type) === nz(w.name))) continue;
+          if (pickOpening.some(o => o.contractor === c && nz(o.name) === nz(w.name))) continue;
+          pickAdded.push({ contractor: c, name: w.name, avail: Math.max(0, hd[key(c, w.name)] || 0) });
+        }
+      }
+    } catch (er) { /* winding types table missing */ }
+    return Response.json({ rows: out.slice(0, 200), people, types, total: out.length, pick: { contractors: CONTRACTORS, issues: pickIssues, opening: pickOpening.sort((a, b) => a.name.localeCompare(b.name)), added: pickAdded.sort((a, b) => a.name.localeCompare(b.name)) } });
   } catch (e) {
     return Response.json({ error: String(e.message || e) }, { status: 500 });
   }
@@ -131,8 +144,12 @@ export async function POST(req) {
       let isu = [];
       if (openName) {
         const held = (await liveRows(sql)).filter(r => nz(r.contractor) === nz(who) && nz(r.stype) === nz(openName) && (r.kind === 'wound' || r.kind === 'sent'));
-        if (!held.length) return Response.json({ error: 'Choose the opening stock item of this contractor' }, { status: 400 });
-        stype = held[0].stype;
+        // A winding type added in the Types tab (no entries yet) is allowed too.
+        let wa = null;
+        try { wa = (await sql`SELECT name FROM wa_wtypes WHERE hidden = false AND lower(name) = lower(${openName})
+            AND (${who} = '*' OR ${who} = ANY(string_to_array(who, ','))) LIMIT 1`)[0] || null; } catch (er) { /* wtypes table missing */ }
+        if (!held.length && !wa) return Response.json({ error: 'Choose the opening stock item of this contractor' }, { status: 400 });
+        stype = wa ? wa.name : held[0].stype;
       } else {
         isu = await sql`SELECT i.id, i.qty::float AS iq, o.stator_type, o.winding_type,
             COALESCE((SELECT SUM(e.qty) FROM ca_meta m JOIN wa_entries e ON e.id = m.entry_id WHERE m.issue_id = i.id AND e.deleted = false AND e.kind = 'wound'),0)::float AS wound
