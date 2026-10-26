@@ -30,7 +30,8 @@ export async function POST(req) {
       for (let tries = 0; tries < 5; tries++) {
         const c = await sql`UPDATE wa_outbox SET status = 'sending', claimed_at = now(), attempts = attempts + 1
           WHERE id = (SELECT id FROM wa_outbox WHERE status = 'queued' AND (${!!s.enabled}::boolean OR event = 'test') ORDER BY id LIMIT 1 FOR UPDATE SKIP LOCKED)
-          RETURNING id, event, recipient, kind, contractor, party, wtype, qty::float AS qty, to_char(d, 'YYYY-MM-DD') AS d, bal_after::float AS bal_after`;
+          RETURNING id, event, recipient, kind, contractor, party, wtype, qty::float AS qty, to_char(d, 'YYYY-MM-DD') AS d, bal_after::float AS bal_after,
+            old_qty::float AS old_qty, to_char(old_d, 'YYYY-MM-DD') AS old_d`;
         if (!c.length) return Response.json({ item: null });
         const row = c[0];
         let phone = '';

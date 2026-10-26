@@ -3,7 +3,7 @@
 // Balances are checked so a change can never make a stock go below zero,
 // and every change is written to the audit log.
 import { db, verify, START } from '../../../lib/core';
-import { alertPlan, insertWithAlerts } from '../../../lib/wa';
+import { alertPlan, insertWithAlerts, normPhone } from '../../../lib/wa';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -241,6 +241,36 @@ export async function POST(req) {
     } else {
       await sql`UPDATE wa_entries SET deleted = true WHERE id = ${id} AND deleted = false`;
     }
+    // WhatsApp: the contractor (and the party, for given entries) is told about
+    // the correction or deletion. Best effort - the fix itself is already saved.
+    try {
+      const s = (await sql`SELECT enabled, test_mode, test_phone FROM wa_alert_settings WHERE id = 1`)[0];
+      if (s && s.enabled && (cur.kind === 'wound' || cur.kind === 'sent')) {
+        const people = cur.kind === 'sent' && cur.party && cur.party !== cur.contractor ? [cur.contractor, cur.party] : [cur.contractor];
+        let contacts = [];
+        try { contacts = await sql`SELECT name, phone, alerts_on FROM wa_contacts`; } catch (e2) { /* contacts missing */ }
+        let wtype = cur.stype;
+        try {
+          const m = await sql`SELECT o.winding_type AS wt FROM ca_meta m JOIN ca_issues i ON i.id = m.issue_id JOIN ca_orders o ON o.id = i.order_id WHERE m.entry_id = ${id} LIMIT 1`;
+          if (m.length && m[0].wt) wtype = m[0].wt;
+        } catch (e2) { /* no order link */ }
+        // balance AFTER the update/delete above
+        const bal = (await sql`SELECT COALESCE(SUM(CASE WHEN x.kind = 'wound' THEN x.qty ELSE -x.qty END), 0)::float AS b
+          FROM wa_entries x WHERE x.deleted = false AND x.contractor = ${cur.contractor} AND x.stype = ${cur.stype} AND x.kind IN ('wound','sent') AND x.d >= ${START}::date`)[0].b;
+        for (const rName of people) {
+          const cc = contacts.find(x => x.name === rName);
+          if (cc && !cc.alerts_on) continue;
+          let phone = '', status = 'queued';
+          if (s.test_mode) phone = normPhone(s.test_phone);
+          else phone = cc ? normPhone(cc.phone) : '';
+          if (!phone) status = 'no_number';
+          await sql`INSERT INTO wa_outbox (entry_id, event, recipient, status, kind, contractor, party, wtype, qty, d, bal_after, old_qty, old_d)
+            VALUES (${id}, ${b.action === 'edit' ? 'edited' : 'deleted'}, ${rName}, ${status}, ${cur.kind}, ${cur.contractor}, ${cur.party}, ${wtype},
+              ${b.action === 'edit' ? newQty : cur.qty}, ${b.action === 'edit' ? newD : cur.d}, ${bal}, ${b.action === 'edit' ? cur.qty : null}, ${b.action === 'edit' ? cur.d : null})
+            ON CONFLICT DO NOTHING`;
+        }
+      }
+    } catch (e2) { /* alerts are best effort; the edit itself is saved */ }
     return Response.json({ ok: true });
   } catch (e) {
     return Response.json({ error: String(e.message || e) }, { status: 500 });
