@@ -3,6 +3,7 @@
 // Balances are checked so a change can never make a stock go below zero,
 // and every change is written to the audit log.
 import { db, verify, START } from '../../../lib/core';
+import { alertPlan, insertWithAlerts } from '../../../lib/wa';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -151,12 +152,24 @@ export async function POST(req) {
       if (isu.length && kind === 'wound' && isu[0].wound + qty > isu[0].iq) return Response.json({ error: 'Only ' + fmt(isu[0].iq - isu[0].wound) + ' left in this order' }, { status: 409 });
       const bad0 = violation(rows0, rows0.concat([{ id: -1, kind, contractor: who, party, stype, qty, d }]));
       if (bad0) return Response.json({ error: 'Not allowed: ' + bad0 }, { status: 409 });
-      const ins = await sql`INSERT INTO wa_entries (kind, contractor, party, stype, qty, d, note) VALUES (${kind}, ${who}, ${party}, ${stype}, ${qty}, ${d}::date, ${'added by admin'}) RETURNING id`;
+      // WhatsApp alerts: who should be told (empty = alerts off or tables not created yet).
+      let plan = [];
+      try { plan = await alertPlan(sql, kind, who, party); } catch (er) { plan = []; }
+      let ins;
+      if (plan.length) {
+        // Entry + order link + alerts are saved together in one statement.
+        const nid = await insertWithAlerts(sql, { kind, contractor: who, party, stype, qty, d, note: 'added by admin' },
+          isu.length ? { id: isu[0].id, winding_type: isu[0].winding_type } : null, (isu.length && isu[0].winding_type) || stype, plan);
+        ins = [{ id: nid }];
+      } else {
+        ins = await sql`INSERT INTO wa_entries (kind, contractor, party, stype, qty, d, note) VALUES (${kind}, ${who}, ${party}, ${stype}, ${qty}, ${d}::date, ${'added by admin'}) RETURNING id`;
+      }
       try {
-        if (isu.length) await sql`INSERT INTO ca_meta (entry_id, issue_id, winding_type) VALUES (${ins[0].id}, ${isu[0].id}, ${isu[0].winding_type})`;
+        if (isu.length && !plan.length) await sql`INSERT INTO ca_meta (entry_id, issue_id, winding_type) VALUES (${ins[0].id}, ${isu[0].id}, ${isu[0].winding_type})`;
         await sql`INSERT INTO wa_audit (entry_id, action, old_value, new_value, by_who) VALUES (${ins[0].id}, 'add', ${null}, ${JSON.stringify({ kind, contractor: who, party, stype, qty, d, issue_id: isu.length ? isu[0].id : null, opening: !!openName })}, 'Jatin (admin)')`;
       } catch (er) {
         await sql`UPDATE wa_entries SET deleted = true WHERE id = ${ins[0].id}`;
+        if (plan.length) { try { await sql`UPDATE wa_outbox SET status = 'cancelled' WHERE entry_id = ${ins[0].id} AND status = 'queued'`; } catch (e2) { /* ignore */ } }
         return Response.json({ error: 'Could not save the order link or audit log. Nothing was added.' }, { status: 500 });
       }
       return Response.json({ ok: true, id: ins[0].id });

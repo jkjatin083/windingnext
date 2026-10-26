@@ -2,6 +2,7 @@
 // Exact port of the live app's api/c.js POST: same tables (wa_entries, ca_meta),
 // same rules (no negative held, no more than order left, no same-day duplicates).
 import { db, verify, WHO, todayIST, holds, openIssues, START } from '../../../lib/core';
+import { alertPlan, insertWithAlerts } from '../../../lib/wa';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -51,6 +52,15 @@ export async function POST(req) {
       return Response.json({ error: 'Same entry is already saved today. Ask Jatin to edit it, or enter a different number.' }, { status: 409 });
     }
     const party = kind === 'sent' ? (me === 'Sunil' ? 'Sunil' : 'Pandey ji') : null;
+    // WhatsApp alerts: who should be told about this entry (empty = alerts off or tables not created yet).
+    let plan = [];
+    try { plan = await alertPlan(sql, kind, me, party); } catch (e) { plan = []; }
+    if (plan.length) {
+      // Entry + order link + alerts are saved together in one statement.
+      const id = await insertWithAlerts(sql, { kind, contractor: me, party, stype, qty, d: today, note: 'via next app' },
+        issue ? { id: issue.id, winding_type: issue.winding_type } : null, (issue && issue.winding_type) || stype, plan);
+      return Response.json({ ok: true, id });
+    }
     const r = await sql`INSERT INTO wa_entries (kind, contractor, party, stype, qty, d, note)
       VALUES (${kind}, ${me}, ${party}, ${stype}, ${qty}, ${today}::date, ${'via next app'}) RETURNING id`;
     if (issue) {

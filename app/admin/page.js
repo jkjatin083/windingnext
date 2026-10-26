@@ -42,6 +42,7 @@ export default function Admin() {
       <h1>Admin</h1>
       {msg ? <div className="good">{msg}</div> : null}
       <Link className="btn" href="/ob" style={{ marginBottom: 14 }}>Order Book (issue, stamping demand, rotor)</Link>
+      <Link className="btn o" href="/wa" style={{ marginBottom: 14 }}>WhatsApp alerts</Link>
       <div className="note">Set a 4 to 6 digit PIN for each person. They log in with name + PIN and see only their own data. "Open" lets you view or enter as that person.</div>
       {err ? <div className="card"><div className="err">{err}</div></div> : null}
       {!data && !err ? <div className="card"><div className="note">Loading...</div></div> : null}
