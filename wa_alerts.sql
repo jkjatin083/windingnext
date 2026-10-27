@@ -9,7 +9,8 @@ CREATE TABLE IF NOT EXISTS wa_alert_settings (
   expire_minutes int NOT NULL DEFAULT 2880,   -- alert older than this is not sent (PC was off). 2880 = 48 h,
                                               -- long enough for night entries (9 PM-9 AM) and a Sunday off
   monthly_cap int NOT NULL DEFAULT 1500,      -- safety limit on sent alerts per month
-  sender_seen timestamptz                     -- last time the computer program checked in
+  sender_seen timestamptz,                    -- last time the computer program checked in
+  poll_seconds int                            -- the check-in rhythm it reported (so "connected" is judged fairly)
 );
 INSERT INTO wa_alert_settings (id) VALUES (1) ON CONFLICT (id) DO NOTHING;
 

@@ -48,7 +48,8 @@ export default function WaAlerts() {
 
   const st = data ? data.settings : null;
   const seen = st && st.seen_ago !== null && st.seen_ago !== undefined ? st.seen_ago : null;
-  const online = seen !== null && seen < 90;
+  // Fresh enough compared to the sender's own reported rhythm (1.6x + slack), not a fixed 90 s.
+  const online = seen !== null && seen < (st && st.poll_seconds ? st.poll_seconds * 1.6 + 30 : 90);
   const seenText = seen === null ? 'Never connected' : (seen < 60 ? 'just now' : seen < 3600 ? Math.round(seen / 60) + ' min ago' : Math.round(seen / 3600) + ' h ago');
 
   return (

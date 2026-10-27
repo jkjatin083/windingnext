@@ -10,7 +10,7 @@ export async function GET(req) {
   try {
     const sql = db();
     let s;
-    try { s = (await sql`SELECT enabled, test_mode, test_phone, expire_minutes, monthly_cap, sender_seen,
+    try { s = (await sql`SELECT enabled, test_mode, test_phone, expire_minutes, monthly_cap, poll_seconds, sender_seen,
         CASE WHEN sender_seen IS NULL THEN NULL ELSE extract(epoch FROM (now() - sender_seen))::int END AS seen_ago
         FROM wa_alert_settings WHERE id = 1`)[0]; }
     catch (e) { return Response.json({ error: 'Run the WhatsApp alerts SQL in Neon first (wa_alerts.sql).' }, { status: 500 }); }

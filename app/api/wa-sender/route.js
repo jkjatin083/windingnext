@@ -18,7 +18,10 @@ export async function POST(req) {
     const b = await req.json().catch(() => ({}));
 
     if (b.action === 'poll') {
-      await sql`UPDATE wa_alert_settings SET sender_seen = now() WHERE id = 1`;
+      // Sender tells us its check-in rhythm so the admin page can judge "connected" fairly.
+      const ps = parseInt(b.poll_seconds, 10);
+      const pollSec = Number.isFinite(ps) && ps >= 20 && ps <= 7200 ? ps : null;
+      await sql`UPDATE wa_alert_settings SET sender_seen = now(), poll_seconds = COALESCE(${pollSec}, poll_seconds) WHERE id = 1`;
       const s = (await sql`SELECT enabled, test_mode, test_phone, expire_minutes, monthly_cap FROM wa_alert_settings WHERE id = 1`)[0];
       if (!s) return Response.json({ error: 'Run the WhatsApp alerts SQL first' }, { status: 500 });
       // old waiting alerts are not sent late
