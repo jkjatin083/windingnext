@@ -2,7 +2,7 @@
 // Exact port of the live app's api/c.js POST: same tables (wa_entries, ca_meta),
 // same rules (no negative held, no more than order left, no same-day duplicates).
 import { db, verify, WHO, todayIST, holds, openIssues, START } from '../../../lib/core';
-import { alertPlan, insertWithAlerts } from '../../../lib/wa';
+import { alertPlan, insertWithAlerts, kick } from '../../../lib/wa';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -59,6 +59,7 @@ export async function POST(req) {
       // Entry + order link + alerts are saved together in one statement.
       const id = await insertWithAlerts(sql, { kind, contractor: me, party, stype, qty, d: today, note: 'via next app' },
         issue ? { id: issue.id, winding_type: issue.winding_type } : null, (issue && issue.winding_type) || stype, plan);
+      await kick();
       return Response.json({ ok: true, id });
     }
     const r = await sql`INSERT INTO wa_entries (kind, contractor, party, stype, qty, d, note)

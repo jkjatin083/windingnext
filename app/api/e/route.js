@@ -3,7 +3,7 @@
 // Balances are checked so a change can never make a stock go below zero,
 // and every change is written to the audit log.
 import { db, verify, START } from '../../../lib/core';
-import { alertPlan, insertWithAlerts, normPhone } from '../../../lib/wa';
+import { alertPlan, insertWithAlerts, normPhone, kick } from '../../../lib/wa';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -178,6 +178,7 @@ export async function POST(req) {
         const nid = await insertWithAlerts(sql, { kind, contractor: who, party, stype, qty, d, note: 'added by admin' },
           isu.length ? { id: isu[0].id, winding_type: isu[0].winding_type } : null, (isu.length && isu[0].winding_type) || stype, plan);
         ins = [{ id: nid }];
+        await kick();
       } else {
         ins = await sql`INSERT INTO wa_entries (kind, contractor, party, stype, qty, d, note) VALUES (${kind}, ${who}, ${party}, ${stype}, ${qty}, ${d}::date, ${'added by admin'}) RETURNING id`;
       }
@@ -269,6 +270,7 @@ export async function POST(req) {
               ${b.action === 'edit' ? newQty : cur.qty}, ${b.action === 'edit' ? newD : cur.d}, ${bal}, ${b.action === 'edit' ? cur.qty : null}, ${b.action === 'edit' ? cur.d : null})
             ON CONFLICT DO NOTHING`;
         }
+        await kick();
       }
     } catch (e2) { /* alerts are best effort; the edit itself is saved */ }
     return Response.json({ ok: true });
