@@ -22,6 +22,22 @@ export default function Report() {
     byType = Object.values(o);
   }
 
+  // Ledger for the Date tab: one block per winding (stype), entries oldest to
+  // newest, each with made (Cr) / given (Dr) and the running balance in hand.
+  const led = rows => {
+    const g = {};
+    (rows || []).forEach(r => {
+      const x = g[r.stype] || (g[r.stype] = { s: r.stype, w: {}, rows: [], made: 0, given: 0, held: 0, last: '' });
+      x.rows.push(r);
+      x.made += r.made; x.given += r.given; x.held = r.held;
+      if (r.d > x.last) x.last = r.d;
+      if (r.wt && r.wt !== '-') x.w[r.wt] = 1;
+    });
+    return Object.values(g)
+      .map(x => ({ ...x, wts: Object.keys(x.w).join(' + ') || 'no order link' }))
+      .sort((a, b) => (a.last < b.last ? 1 : -1));
+  };
+
   return (
     <div className="w">
       <Top date={R ? dm(R.to) : dm(todayIST())} />
@@ -51,14 +67,31 @@ export default function Report() {
               </table>
             </div>
           ) : null}
-          <div className="card"><div className="lab">Entries | {dm(R.from)} - {dm(R.to)}</div>
+          <div className="card"><div className="lab">Winding ledger | {dm(R.from)} - {dm(R.to)}</div>
             {!R.rows.length ? <div className="note">No entries yet.</div> : null}
-            {R.rows.slice().reverse().map((r, i) => (
-              <div className="row" key={i}>
-                <div><b>{dm(r.d)} | {r.stype}</b><small>{r.wt} | made {fmt(r.made)} | given {fmt(r.given)}</small></div>
-                <span style={{ color: 'var(--a)' }}>{fmt(r.held)} held</span>
+            {led(R.rows).map((w, i) => (
+              <div key={w.s} style={{ margin: i ? '18px 0 0' : '0' }}>
+                <div className="ord">
+                  <div><b>{w.s}</b><small>{w.wts}</small></div>
+                  <span className="pill">{fmt(w.held)} in hand</span>
+                </div>
+                <table>
+                  <thead><tr><th>Date</th><th>Made (Cr)</th><th>Given (Dr)</th><th>Balance</th></tr></thead>
+                  <tbody>
+                    {w.rows.map((r, j) => (
+                      <tr key={j}>
+                        <td>{dm(r.d)}</td>
+                        <td style={{ color: 'var(--a)' }}>{r.made ? fmt(r.made) : ''}</td>
+                        <td style={{ color: 'var(--red)' }}>{r.given ? fmt(r.given) : ''}</td>
+                        <td><b>{fmt(r.held)}</b></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                <div className="bl"><span>Total made {fmt(w.made)}</span><span>Total given {fmt(w.given)}</span></div>
               </div>
             ))}
+            <div className="note">Made = add (Cr), Given = remove (Dr). Balance is what is in the contractor's hand after that date, for that winding.</div>
           </div>
         </>
       ) : null}
