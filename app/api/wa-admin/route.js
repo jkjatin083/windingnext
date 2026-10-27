@@ -31,7 +31,7 @@ export async function GET(req) {
       waiting: cnt[0].waiting, monthSent: cnt[0].month_sent,
       people: WHO.map(n => ({ name: n, phone: (cm[n] && cm[n].phone) || '', alerts_on: cm[n] ? cm[n].alerts_on : true })),
       log: log.map(r => ({ id: r.id, at: r.at, status: r.status, error: r.error, recipient: r.recipient, event: r.event,
-        what: r.event === 'test' ? 'Test message' : (r.event === 'made' ? 'Made ' : 'Given ') + r.qty,
+        what: r.event === 'test' ? 'Test message' : (r.event === 'edited' ? 'Corrected to ' : r.event === 'deleted' ? 'Removed ' : (r.event === 'made' ? 'Made ' : 'Given ')) + r.qty,
         text: renderBody(r, {}) }))
     });
   } catch (e) {
