@@ -1,10 +1,14 @@
 'use client';
 // Contractor App 1 - Give to Pandey ji. Exact port of the live app1.html
 // Give tab: order chips, stators-you-hold tiles, big quantity, hold-after.
+// Save now shows a full-screen result: animated success only after the server
+// confirms, "not sure if saved" on a dropped connection, "not added" only on
+// a clear server refusal (components/saved.js).
 import { useState } from 'react';
 import { useApi, postJson } from '../../components/store';
 import Nav from '../../components/nav';
 import Top from '../../components/top';
+import SavedOverlay, { nowIST } from '../../components/saved';
 import { fmt, dm, todayIST } from '../../components/motor';
 
 export default function Give() {
@@ -13,7 +17,7 @@ export default function Give() {
   const [qty, setQty] = useState('');
   const [err2, setErr2] = useState('');
   const [busy, setBusy] = useState(false);
-  const [toast, setToast] = useState('');
+  const [done, setDone] = useState(null);
 
   const me = H ? H.me : '';
   const NEXT = me === 'Sunil' ? 'Sunil (ready)' : 'Pandey ji';
@@ -28,23 +32,33 @@ export default function Give() {
   const after = hold - (+qty || 0);
 
   async function save() {
+    if (busy) return; // double-tap guard
     setErr2('');
     const q = +qty;
     if (!stype) { setErr2('Choose the stamping type'); return; }
     if (!(q > 0) || q !== Math.floor(q)) { setErr2('Enter a whole number above 0'); return; }
     setBusy(true);
+    const label = stype;
     try {
-      await postJson('/api/c', { action: 'give', stype, qty: q, issue_id: od ? od.id : null });
-      setToast('Saved'); setTimeout(() => setToast(''), 2500);
+      const res = await postJson('/api/c', { action: 'give', stype, qty: q, issue_id: od ? od.id : null });
+      if (!res) { setBusy(false); return; } // login expired - redirecting to login, show nothing
+      if (res.ok !== true) { setDone({ view: 'unknown', qty: q, note: 'Server problem while saving', rows: [['Your entry', fmt(q) + '  \u00b7  ' + label], ['Status', 'Unknown', '#b54708']] }); setBusy(false); return; }
+      // Server confirmed the save (res.ok === true) - only now show the success animation.
+      const fresh = await reload();
+      const rows = [['Stamping type', label]];
+      if (fresh) rows.push(['You still hold', fmt(Math.max(0, ((fresh.holds || {})[stype] || { held: 0 }).held)), '#0e9f83']);
+      rows.push(['Time', nowIST()]);
+      setDone({ view: 'success', qty: q, title: 'Given to ' + NEXT + ' - saved', rows });
       setQty('');
-      await reload();
-    } catch (e) { setErr2(e.message); }
+    } catch (e) {
+      if (e && e.rejected) setDone({ view: 'rejected', qty: q, reason: e.message, rows: [['Your entry', fmt(q) + '  ·  ' + label], ['Status', 'Not added', '#b3261e']] });
+      else setDone({ view: 'unknown', qty: q, note: e && e.serverError ? 'Server problem while saving' : 'Internet dropped while saving', rows: [['Your entry', fmt(q) + '  ·  ' + label], ['Status', 'Unknown', '#b54708']] });
+    }
     setBusy(false);
   }
 
   return (
     <div className="w">
-      {toast ? <div id="toast">{toast}</div> : null}
       <Top date={H ? dm(H.today) : dm(todayIST())} />
       <h1>Give to {NEXT}</h1>
       {err ? <div className="card"><div className="err">{err}</div></div> : null}
@@ -105,6 +119,7 @@ export default function Give() {
         <div className="err">{err2}</div>
         <button className="btn dk" disabled={busy} onClick={save}>{busy ? 'Saving...' : 'Give'}</button>
       </div></div>
+      {done ? <SavedOverlay {...done} onClose={() => setDone(null)} /> : null}
       <Nav />
     </div>
   );
