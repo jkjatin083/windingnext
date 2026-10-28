@@ -1,10 +1,14 @@
 'use client';
 // Contractor App 1 - Made today. Exact port of the live app1.html Made tab:
 // order card, stator tiles (order + opening stock), big quantity, quick adds.
+// Save now shows a full-screen result: animated success only after the server
+// confirms, "not sure if saved" on a dropped connection, "not added" only on
+// a clear server refusal (components/saved.js).
 import { useState } from 'react';
 import { useApi, postJson } from '../../components/store';
 import Nav from '../../components/nav';
 import Top from '../../components/top';
+import SavedOverlay, { nowIST } from '../../components/saved';
 import { fmt, dm, todayIST } from '../../components/motor';
 
 export default function Made() {
@@ -13,7 +17,7 @@ export default function Made() {
   const [qty, setQty] = useState('');
   const [err2, setErr2] = useState('');
   const [busy, setBusy] = useState(false);
-  const [toast, setToast] = useState('');
+  const [done, setDone] = useState(null);
 
   const mi = H ? H.issues.filter(i => i.left > 0) : [];
   const added = H ? (H.added || []) : [];
@@ -28,23 +32,38 @@ export default function Made() {
   const stype = open || (cur && cur.stator_type) || null;
 
   async function save() {
+    if (busy) return; // double-tap guard
     setErr2('');
     const q = +qty;
     if (!stype) { setErr2(mi.length || all.length ? 'Choose the order' : 'No order issued'); return; }
     if (!(q > 0) || q !== Math.floor(q)) { setErr2('Enter a whole number above 0'); return; }
     setBusy(true);
+    const label = open ? open : (cur ? cur.winding_type : '');
     try {
-      await postJson('/api/c', { action: 'made', stype, qty: q, issue_id: open ? null : (cur && cur.id), opening: open ? 1 : 0 });
-      setToast('Saved'); setTimeout(() => setToast(''), 2500);
+      const res = await postJson('/api/c', { action: 'made', stype, qty: q, issue_id: open ? null : (cur && cur.id), opening: open ? 1 : 0 });
+      if (!res) { setBusy(false); return; } // login expired - redirecting to login, show nothing
+      if (res.ok !== true) { setDone({ view: 'unknown', qty: q, note: 'Server problem while saving', rows: [['Your entry', fmt(q) + '  \u00b7  ' + label], ['Status', 'Unknown', '#b54708']] }); setBusy(false); return; }
+      // Server confirmed the save (res.ok === true) - only now show the success animation.
+      const fresh = await reload();
+      const rows = [['Winding type', label]];
+      const iss = !open && cur && fresh ? (fresh.issues || []).find(i => i.id === cur.id) : null;
+      if (iss) rows.push(['Order', '#' + iss.order_no + '  ·  ' + fmt(iss.left) + ' left']);
+      if (fresh) {
+        rows.push(['Made today', fmt(fresh.madeToday)]);
+        rows.push(['You now hold', fmt(Math.max(0, ((fresh.holds || {})[stype] || { held: 0 }).held)), '#0e9f83']);
+      }
+      rows.push(['Time', nowIST()]);
+      setDone({ view: 'success', qty: q, title: 'Stators made - saved', rows });
       setQty('');
-      await reload();
-    } catch (e) { setErr2(e.message); }
+    } catch (e) {
+      if (e && e.rejected) setDone({ view: 'rejected', qty: q, reason: e.message, rows: [['Your entry', fmt(q) + '  ·  ' + label], ['Status', 'Not added', '#b3261e']] });
+      else setDone({ view: 'unknown', qty: q, note: e && e.serverError ? 'Server problem while saving' : 'Internet dropped while saving', rows: [['Your entry', fmt(q) + '  ·  ' + label], ['Status', 'Unknown', '#b54708']] });
+    }
     setBusy(false);
   }
 
   return (
     <div className="w">
-      {toast ? <div id="toast">{toast}</div> : null}
       <Top date={H ? dm(H.today) : dm(todayIST())} />
       <h1>Made today</h1>
       {err ? <div className="card"><div className="err">{err}</div></div> : null}
@@ -123,8 +142,8 @@ export default function Made() {
         <div className="err">{err2}</div>
         <button className="btn" disabled={busy} onClick={save}>{busy ? 'Saving...' : 'Save'}</button>
       </div></div>
+      {done ? <SavedOverlay {...done} onClose={() => setDone(null)} /> : null}
       <Nav />
     </div>
   );
 }
-
