@@ -3,12 +3,14 @@
 // Give tab: order chips, stators-you-hold tiles, big quantity, hold-after.
 // Save now shows a full-screen result: animated success only after the server
 // confirms, "not sure if saved" on a dropped connection, "not added" only on
-// a clear server refusal (components/saved.js).
+// a clear server refusal (components/saved.js). Before saving, a UPI-style
+// confirm sheet asks once (components/upi.js).
 import { useState } from 'react';
 import { useApi, postJson } from '../../components/store';
 import Nav from '../../components/nav';
 import Top from '../../components/top';
 import SavedOverlay, { nowIST } from '../../components/saved';
+import { ConfirmSheet } from '../../components/upi';
 import { fmt, dm, todayIST } from '../../components/motor';
 
 export default function Give() {
@@ -18,6 +20,7 @@ export default function Give() {
   const [err2, setErr2] = useState('');
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(null);
+  const [snap, setSnap] = useState(null); // confirm-sheet content; sheet open while non-null
 
   const me = H ? H.me : '';
   const NEXT = me === 'Sunil' ? 'Sunil (ready)' : 'Pandey ji';
@@ -30,6 +33,31 @@ export default function Give() {
     : (od && od.stator_type && bal(od.stator_type) > 0 ? od.stator_type : ((opts.find(o => o[1] > 0) || [null])[0]));
   const hold = stype ? bal(stype) : 0;
   const after = hold - (+qty || 0);
+
+  // UPI-style: Give first opens the confirm sheet; save() only runs on Confirm.
+  function ask() {
+    if (!H) return;
+    setErr2('');
+    const q = +qty;
+    if (!stype) { setErr2('Choose the stamping type'); return; }
+    if (!(q > 0) || q !== Math.floor(q)) { setErr2('Enter a whole number above 0'); return; }
+    setSnap({
+      hero: [fmt(q), 'stators to give'],
+      title: 'Confirm giving?',
+      sub: 'Once saved, these leave your hold.',
+      rows: [
+        ['Type', stype],
+        ['To', me === 'Sunil' ? "Sunil's own motors" : 'Pandey ji'],
+        ['In hand after', fmt(Math.max(0, after))],
+        ['Order', od ? 'Order #' + od.order_no : 'No order'],
+        ['Date', dm(H.today)],
+      ],
+    });
+  }
+
+  async function confirm() {
+    try { await save(); } finally { setSnap(null); }
+  }
 
   async function save() {
     if (busy) return; // double-tap guard
@@ -51,8 +79,8 @@ export default function Give() {
       setDone({ view: 'success', qty: q, title: 'Given to ' + NEXT + ' - saved', rows });
       setQty('');
     } catch (e) {
-      if (e && e.rejected) setDone({ view: 'rejected', qty: q, reason: e.message, rows: [['Your entry', fmt(q) + '  ·  ' + label], ['Status', 'Not added', '#b3261e']] });
-      else setDone({ view: 'unknown', qty: q, note: e && e.serverError ? 'Server problem while saving' : 'Internet dropped while saving', rows: [['Your entry', fmt(q) + '  ·  ' + label], ['Status', 'Unknown', '#b54708']] });
+      if (e && e.rejected) setDone({ view: 'rejected', qty: q, reason: e.message, rows: [['Your entry', fmt(q) + '  -+  ' + label], ['Status', 'Not added', '#b3261e']] });
+      else setDone({ view: 'unknown', qty: q, note: e && e.serverError ? 'Server problem while saving' : 'Internet dropped while saving', rows: [['Your entry', fmt(q) + '  -+  ' + label], ['Status', 'Unknown', '#b54708']] });
     }
     setBusy(false);
   }
@@ -117,8 +145,15 @@ export default function Give() {
       ) : null}
       <div className="sticky" style={{ bottom: 70 }}><div>
         <div className="err">{err2}</div>
-        <button className="btn dk" disabled={busy} onClick={save}>{busy ? 'Saving...' : 'Give'}</button>
+        <button className="btn dk" disabled={busy} onClick={ask}>Give</button>
       </div></div>
+      <ConfirmSheet
+        open={!!snap}
+        title={snap ? snap.title : ''} sub={snap ? snap.sub : ''} hero={snap ? snap.hero : null}
+        rows={snap ? snap.rows : []} busy={busy}
+        onCancel={() => setSnap(null)}
+        onConfirm={confirm}
+      />
       {done ? <SavedOverlay {...done} onClose={() => setDone(null)} /> : null}
       <Nav />
     </div>

@@ -3,12 +3,14 @@
 // order card, stator tiles (order + opening stock), big quantity, quick adds.
 // Save now shows a full-screen result: animated success only after the server
 // confirms, "not sure if saved" on a dropped connection, "not added" only on
-// a clear server refusal (components/saved.js).
+// a clear server refusal (components/saved.js). Before saving, a UPI-style
+// confirm sheet asks once (components/upi.js).
 import { useState } from 'react';
 import { useApi, postJson } from '../../components/store';
 import Nav from '../../components/nav';
 import Top from '../../components/top';
 import SavedOverlay, { nowIST } from '../../components/saved';
+import { ConfirmSheet } from '../../components/upi';
 import { fmt, dm, todayIST } from '../../components/motor';
 
 export default function Made() {
@@ -18,6 +20,7 @@ export default function Made() {
   const [err2, setErr2] = useState('');
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(null);
+  const [snap, setSnap] = useState(null); // confirm-sheet content; sheet open while non-null
 
   const mi = H ? H.issues.filter(i => i.left > 0) : [];
   const added = H ? (H.added || []) : [];
@@ -30,6 +33,32 @@ export default function Made() {
   const open = sel.open && all.find(o => o[0] === sel.open) ? sel.open : (!cur && all.length ? all[0][0] : sel.open);
   const od = open ? null : cur;
   const stype = open || (cur && cur.stator_type) || null;
+
+  // UPI-style: Save first opens the confirm sheet; save() only runs on Confirm.
+  function ask() {
+    if (!H) return;
+    setErr2('');
+    const q = +qty;
+    if (!stype) { setErr2(mi.length || all.length ? 'Choose the order' : 'No order issued'); return; }
+    if (!(q > 0) || q !== Math.floor(q)) { setErr2('Enter a whole number above 0'); return; }
+    const held = Math.max(0, ((H.holds || {})[stype] || { held: 0 }).held);
+    setSnap({
+      hero: [fmt(q), 'stators made'],
+      title: 'Confirm made?',
+      sub: 'One last look, then it goes to your stock.',
+      rows: [
+        ['Type', stype],
+        ['To', 'Your own stock'],
+        ['In hand after', fmt(held + q)],
+        [open ? 'Stock' : 'Order', open ? 'Opening stock (no order)' : 'Order #' + cur.order_no],
+        ['Date', dm(H.today)],
+      ],
+    });
+  }
+
+  async function confirm() {
+    try { await save(); } finally { setSnap(null); }
+  }
 
   async function save() {
     if (busy) return; // double-tap guard
@@ -47,7 +76,7 @@ export default function Made() {
       const fresh = await reload();
       const rows = [['Winding type', label]];
       const iss = !open && cur && fresh ? (fresh.issues || []).find(i => i.id === cur.id) : null;
-      if (iss) rows.push(['Order', '#' + iss.order_no + '  ·  ' + fmt(iss.left) + ' left']);
+      if (iss) rows.push(['Order', '#' + iss.order_no + '  -+  ' + fmt(iss.left) + ' left']);
       if (fresh) {
         rows.push(['Made today', fmt(fresh.madeToday)]);
         rows.push(['You now hold', fmt(Math.max(0, ((fresh.holds || {})[stype] || { held: 0 }).held)), '#0e9f83']);
@@ -56,8 +85,8 @@ export default function Made() {
       setDone({ view: 'success', qty: q, title: 'Stators made - saved', rows });
       setQty('');
     } catch (e) {
-      if (e && e.rejected) setDone({ view: 'rejected', qty: q, reason: e.message, rows: [['Your entry', fmt(q) + '  ·  ' + label], ['Status', 'Not added', '#b3261e']] });
-      else setDone({ view: 'unknown', qty: q, note: e && e.serverError ? 'Server problem while saving' : 'Internet dropped while saving', rows: [['Your entry', fmt(q) + '  ·  ' + label], ['Status', 'Unknown', '#b54708']] });
+      if (e && e.rejected) setDone({ view: 'rejected', qty: q, reason: e.message, rows: [['Your entry', fmt(q) + '  -+  ' + label], ['Status', 'Not added', '#b3261e']] });
+      else setDone({ view: 'unknown', qty: q, note: e && e.serverError ? 'Server problem while saving' : 'Internet dropped while saving', rows: [['Your entry', fmt(q) + '  -+  ' + label], ['Status', 'Unknown', '#b54708']] });
     }
     setBusy(false);
   }
@@ -140,8 +169,15 @@ export default function Made() {
       ) : null}
       <div className="sticky" style={{ bottom: 70 }}><div>
         <div className="err">{err2}</div>
-        <button className="btn" disabled={busy} onClick={save}>{busy ? 'Saving...' : 'Save'}</button>
+        <button className="btn" disabled={busy} onClick={ask}>Save</button>
       </div></div>
+      <ConfirmSheet
+        open={!!snap}
+        title={snap ? snap.title : ''} sub={snap ? snap.sub : ''} hero={snap ? snap.hero : null}
+        rows={snap ? snap.rows : []} busy={busy}
+        onCancel={() => setSnap(null)}
+        onConfirm={confirm}
+      />
       {done ? <SavedOverlay {...done} onClose={() => setDone(null)} /> : null}
       <Nav />
     </div>

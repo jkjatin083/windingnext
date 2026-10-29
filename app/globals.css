@@ -118,3 +118,22 @@ label.l{display:block;font-size:11.5px;font-weight:600;letter-spacing:.06em;text
 .seg{display:flex;background:#eceef2;border-radius:12px;padding:3px;margin-bottom:14px}
 .seg button{flex:1;border:0;background:none;font:inherit;text-align:center;padding:8px;border-radius:10px;font-size:13.5px;font-weight:600;color:var(--mute);cursor:pointer}
 .seg button.on{background:#fff;color:var(--ink);box-shadow:0 1px 2px rgba(16,24,40,.1)}
+
+/* UPI-style confirm sheet + done pop (Made/Give) */
+.upi-mask{position:fixed;inset:0;background:rgba(16,24,40,.55);z-index:60;display:flex;align-items:flex-end;justify-content:center;animation:upiFade .18s ease-out}
+.upi-sheet{width:100%;max-width:460px;background:#fff;border-radius:22px 22px 0 0;padding:8px 20px calc(20px + env(safe-area-inset-bottom));animation:upiUp .3s cubic-bezier(.2,.9,.3,1)}
+.upi-grip{width:40px;height:4px;border-radius:2px;background:#e4e7ec;margin:8px auto 14px}
+.upi-sheet h3{font-size:19px;margin-bottom:2px}
+.upi-sub{color:var(--mute);font-size:13px;margin-bottom:12px}
+.upi-hero{text-align:center;margin:2px 0 12px}
+.upi-big{font-size:36px;font-weight:700;letter-spacing:-.02em}
+.upi-cap{color:var(--mute);font-size:12.5px}
+.upi-rows{background:var(--bg);border-radius:14px;padding:4px 14px;margin-bottom:16px}
+.upi-row{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:9px 0}
+.upi-row + .upi-row{border-top:1px solid var(--line)}
+.upi-row span{color:var(--mute);font-size:13px}
+.upi-row b{font-size:14px;text-align:right}
+.upi-actions{display:flex;gap:10px}
+.upi-actions .bt{flex:1}
+@keyframes upiFade{from{opacity:0}to{opacity:1}}
+@keyframes upiUp{from{transform:translateY(60px)}to{transform:translateY(0)}}
