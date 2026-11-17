@@ -11,7 +11,7 @@ export const dynamic = 'force-dynamic';
 
 const PARTS_CHECK = false; // same switch as live api/wa.js - set true to block motor saves when parts are short
 const MOTOR_WHO = ['Pandey ji', 'Sunil'];
-const CONTRACTORS = ['Suman', 'Dinesh', 'Ajeet', 'Siraj', 'Sunil', 'Pandey ji'];
+const CONTRACTORS = ['Suman', 'Dinesh', 'Ajeet', 'Siraj', 'Sunil', 'Khalender', 'Anil', 'Pandey ji'];
 
 // Midland mein party ka naam alag alag likha ho sakta hai (Pandayji / Pandey ji ...)
 function normParty(p) {
