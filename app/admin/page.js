@@ -8,7 +8,7 @@ import Nav from '../../components/nav';
 import Top from '../../components/top';
 import { dm, todayIST } from '../../components/motor';
 
-const APP1 = ['Suman', 'Dinesh', 'Ajeet', 'Siraj', 'Sunil'];
+const APP1 = ['Suman', 'Dinesh', 'Ajeet', 'Siraj', 'Sunil', 'Khalender', 'Anil'];
 const APP2 = ['Pandey ji', 'Sunil'];
 const SALE = ['Sandeep'];
 
