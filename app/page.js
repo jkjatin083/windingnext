@@ -1,7 +1,7 @@
 'use client';
 import { useState } from 'react';
 
-const NAMES = ['Suman', 'Dinesh', 'Ajeet', 'Siraj', 'Sunil', 'Pandey ji', 'Sandeep', 'Admin'];
+const NAMES = ['Suman', 'Dinesh', 'Ajeet', 'Siraj', 'Sunil', 'Khalender', 'Anil', 'Pandey ji', 'Sandeep', 'Admin'];
 
 export default function Login() {
   const [name, setName] = useState(NAMES[0]);
