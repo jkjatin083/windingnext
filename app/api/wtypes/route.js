@@ -5,7 +5,7 @@ import { db, verify } from '../../../lib/core';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-const WHO1 = ['Suman', 'Dinesh', 'Ajeet', 'Siraj', 'Sunil'];
+const WHO1 = ['Suman', 'Dinesh', 'Ajeet', 'Siraj', 'Sunil', 'Khalender', 'Anil'];
 
 export async function GET(req) {
   if (verify(req) !== 'ADMIN') return Response.json({ error: 'Admin login needed' }, { status: 401 });
