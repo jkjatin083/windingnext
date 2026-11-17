@@ -11,7 +11,7 @@ export const dynamic = 'force-dynamic';
 const APP1 = ['stamp_in', 'wound', 'sent', 'transfer'];
 const APP2 = ['made', 'mdispatch', 'dispatch'];
 const todayIST = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
-const CONTRACTORS = ['Suman', 'Dinesh', 'Ajeet', 'Siraj', 'Sunil'];
+const CONTRACTORS = ['Suman', 'Dinesh', 'Ajeet', 'Siraj', 'Sunil', 'Khalender', 'Anil'];
 const nz = s => String(s == null ? '' : s).trim().toLowerCase();
 const fmt = n => Number(n).toLocaleString('en-IN');
 
