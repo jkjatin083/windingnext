@@ -8,7 +8,7 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 // Contractors who use this page (App 1). Pandey ji uses the motor app.
-const WHO1 = ['Suman', 'Dinesh', 'Ajeet', 'Siraj', 'Sunil'];
+const WHO1 = ['Suman', 'Dinesh', 'Ajeet', 'Siraj', 'Sunil', 'Khalender', 'Anil'];
 function normParty(p) {
   const k = String(p || '').toLowerCase().replace(/[^a-z]/g, '');
   return WHO1.find(c => c.toLowerCase() === k) || null;
@@ -156,4 +156,3 @@ export async function POST(req) {
     return Response.json({ error: String(e.message || e) }, { status: 500 });
   }
 }
-
