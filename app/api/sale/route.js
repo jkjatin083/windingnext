@@ -8,7 +8,7 @@ import { midlandTypes } from '../../../lib/mid';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-const CONTRACTORS = ['Suman', 'Dinesh', 'Ajeet', 'Siraj', 'Sunil'];
+const CONTRACTORS = ['Suman', 'Dinesh', 'Ajeet', 'Siraj', 'Sunil', 'Khalender', 'Anil'];
 
 // Day when the running total of entries reaches qty (or null)
 function doneDate(list, qty) {
