@@ -8,7 +8,7 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 const START = '2026-10-01';
-const CONTRACTORS = ['Suman', 'Dinesh', 'Ajeet', 'Siraj', 'Sunil'];
+const CONTRACTORS = ['Suman', 'Dinesh', 'Ajeet', 'Siraj', 'Sunil', 'Khalender', 'Anil'];
 
 // Stators in hand with the motor makers (Pandey ji / Sunil): given to them minus motors they made, per source contractor + stamping type
 function inHand(ev) {
