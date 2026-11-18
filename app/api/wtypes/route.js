@@ -48,6 +48,11 @@ export async function POST(req) {
       const cur = await sql`SELECT id, name FROM wa_wtypes WHERE id = ${id}`;
       if (!cur.length) return Response.json({ error: 'Invalid type' }, { status: 400 });
       const oldName = cur[0].name;
+      if(oldName!==name){
+        const present=await sql`SELECT to_regclass('public.wn_wire_accounts') AS present`;
+        const tracked=present[0]?.present?await sql`SELECT 1 FROM wn_wire_accounts a,jsonb_array_elements(a.body->'runs') r WHERE r->>'stype'=${oldName} LIMIT 1`:[];
+        if(tracked.length)return Response.json({error:'This type has wire history. Keep its name to preserve the linked Made and returns.'},{status:409});
+      }
       const dup = await sql`SELECT id FROM wa_wtypes WHERE lower(name) = lower(${name}) AND id <> ${id} LIMIT 1`;
       if (dup.length) return Response.json({ error: 'This type is already in the list' }, { status: 409 });
       if (who === null) await sql`UPDATE wa_wtypes SET name = ${name} WHERE id = ${id}`;

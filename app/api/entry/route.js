@@ -2,6 +2,7 @@
 // Exact port of the live app's api/c.js POST: same tables (wa_entries, ca_meta),
 // same rules (no negative held, no more than order left, no same-day duplicates).
 import { db, verify, WHO, todayIST, holds, openIssues, START } from '../../../lib/core';
+import { refreshWire } from '../../../lib/wire-store';
 import { alertPlan, insertWithAlerts, kick } from '../../../lib/wa';
 
 export const runtime = 'nodejs';
@@ -16,6 +17,7 @@ export async function POST(req) {
     const b = await req.json().catch(() => ({}));
     const kind = b.action === 'give' ? 'sent' : (b.action === 'made' ? 'wound' : null);
     if (!kind) return Response.json({ error: 'Invalid action' }, { status: 400 });
+    if(kind==='wound') await refreshWire(me);
     const qty = Number(b.qty);
     let stype = String(b.stype || '').trim().slice(0, 60);
     if (!Number.isInteger(qty) || qty <= 0 || qty > 1000000) {

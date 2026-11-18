@@ -4,6 +4,7 @@
 // and every change is written to the audit log.
 import { db, verify, START } from '../../../lib/core';
 import { alertPlan, insertWithAlerts, normPhone, kick } from '../../../lib/wa';
+import { refreshWire } from '../../../lib/wire-store';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -134,6 +135,7 @@ export async function POST(req) {
     const b = await req.json().catch(() => ({}));
     if (b.action === 'add') {
       // Admin add: only Made (wound) and Given to Pandey ji (sent). No motors, no stamping entries.
+      if (b.entry === 'made') await refreshWire(String(b.contractor || '').trim(), 'ADMIN');
       const kind = b.entry === 'made' ? 'wound' : (b.entry === 'given' ? 'sent' : null);
       const who = String(b.contractor || '').trim();
       let stype = '';
@@ -201,6 +203,7 @@ export async function POST(req) {
     const all = await liveRows(sql);
     const cur = all.find(r => r.id === id);
     if (!cur) return Response.json({ error: 'Entry not found (already deleted?)' }, { status: 404 });
+    if (cur.kind === 'wound') await refreshWire(cur.contractor, 'ADMIN');
     let after, newQty = cur.qty, newD = cur.d;
 
     if (b.action === 'edit') {

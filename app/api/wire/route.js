@@ -1,0 +1,6 @@
+import{verify,db}from'../../../lib/core';
+import{PEOPLE,wireEnabled,wireView,command}from'../../../lib/wire-store';
+export const runtime='nodejs';export const dynamic='force-dynamic';
+function who(req,body={}){const actor=verify(req);if(!actor)throw Error('Please log in');const name=actor==='ADMIN'?(body.contractor||new URL(req.url).searchParams.get('contractor')):actor;if(!PEOPLE.includes(name))throw Error('Choose a contractor');return{actor,name};}
+export async function GET(req){try{if(!wireEnabled())return Response.json({enabled:false});const{actor,name}=who(req);return Response.json({enabled:true,admin:actor==='ADMIN',people:actor==='ADMIN'?PEOPLE:undefined,...await wireView(name)},{headers:{'Cache-Control':'no-store'}});}catch(e){return Response.json({error:e.message},{status:400});}}
+export async function POST(req){try{if(!wireEnabled())throw Error('Wire tracking is not enabled');const b=await req.json(),{actor,name}=who(req,b);const control=await db()`SELECT paused FROM wn_wire_control WHERE id=1`;if(control[0]?.paused&&b.action!=='retry')throw Error('Wire tracking is paused by Admin');return Response.json(await command(name,b,actor));}catch(e){return Response.json({error:e.message,uncertain:!!e.uncertain},{status:e.uncertain?503:409});}}

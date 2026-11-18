@@ -24,6 +24,7 @@ const ic = {
 const BASE = [
   { href: '/made', label: 'Made', icon: ic.make },
   { href: '/give', label: 'Give', icon: ic.dispatch },
+  { href: '/wire', label: 'Wire', icon: ic.hisab },
   { href: '/report', label: 'Report', icon: ic.report }
 ];
 const MOTOR = [
@@ -45,7 +46,8 @@ const ADMIN = [
   { href: '/demand', label: 'Contractors', icon: ic.entries },
   { href: '/rotor', label: 'Rotor', icon: ic.rotor },
   { href: '/eadmin', label: 'Entries', icon: ic.entries },
-  { href: '/wtypes', label: 'Types', icon: ic.new }
+  { href: '/wtypes', label: 'Types', icon: ic.new },
+  { href: '/wire', label: 'Wire', icon: ic.hisab }
 ];
 
 function itemsFor(name) {

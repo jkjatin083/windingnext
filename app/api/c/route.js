@@ -3,6 +3,7 @@
 // GET ?view=report (date/type/order hisaab), POST made/give entries.
 import { db, verify, START, todayIST, holds, midOut, stampStock, openIssues } from '../../../lib/core';
 import { alertPlan, insertWithAlerts, kick } from '../../../lib/wa';
+import { refreshWire } from '../../../lib/wire-store';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -105,6 +106,7 @@ export async function POST(req) {
     const b = await req.json().catch(() => ({}));
     const kind = b.action === 'give' ? 'sent' : (b.action === 'made' ? 'wound' : null);
     if (!kind) return Response.json({ error: 'Invalid action' }, { status: 400 });
+    if(kind==='wound') await refreshWire(me);
     const qty = Number(b.qty);
     let stype = String(b.stype || '').trim().slice(0, 60);
     if (!Number.isInteger(qty) || qty <= 0 || qty > 1000000) return Response.json({ error: 'Enter a whole number above 0' }, { status: 400 });
