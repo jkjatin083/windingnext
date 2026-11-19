@@ -115,7 +115,7 @@ export default function MotorMake() {
             {ws.length ? (
               <>
                 <table>
-                  <thead><tr><th>From</th><th>Type</th><th>Received</th><th>Motors made</th><th>Available</th></tr></thead>
+                  <thead><tr><th>From</th><th>Type</th><th>Accepted</th><th>Motors made</th><th>Available</th></tr></thead>
                   <tbody>
                     {ws.map(x => (
                       <tr key={x.c + '|' + x.t}>
@@ -240,7 +240,7 @@ export default function MotorMake() {
           </div>
         </div>
       ) : null}
-      <Nav />
+      {ws.some(x=>x.rejected>0)&&<div className="card"><div className="lab">Rejected stators returned</div>{ws.filter(x=>x.rejected>0).map(x=><div key={x.c+'|'+x.t} style={{padding:'12px 0',borderTop:'1px solid var(--line)'}}><b>{x.c} · {x.t}</b><p className="note">Received {fmt(x.gross)} · rejected back {fmt(x.rejected)} · accepted {fmt(x.recv)} · motors {fmt(x.disp)}</p><b>{fmt(x.recv-x.disp)} available</b></div>)}<p className="note">Updated from the contractor’s confirmed final Record Return. No second entry needed.</p></div>}<Nav />
     </div>
   );
 }

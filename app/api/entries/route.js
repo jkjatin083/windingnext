@@ -14,17 +14,21 @@ export async function GET(req) {
     let rows;
     try {
       rows = await sql`SELECT to_char(e.d,'YYYY-MM-DD') AS d, e.stype, COALESCE(m.winding_type,'-') AS wt, o.order_no,
-          COALESCE(SUM(CASE WHEN e.kind='wound' THEN e.qty END),0)::float AS made,
+          COALESCE(SUM(CASE WHEN e.kind='wound' THEN e.gross_qty END),0)::float AS gross_made,
+            COALESCE(SUM(CASE WHEN e.kind='wound' THEN e.rejected_qty END),0)::float AS rejected,
+            COALESCE(SUM(CASE WHEN e.kind='wound' THEN e.qty END),0)::float AS made,
           COALESCE(SUM(CASE WHEN e.kind='sent' THEN e.qty END),0)::float AS given
-        FROM wa_entries e LEFT JOIN ca_meta m ON m.entry_id = e.id
+        FROM wn_effective_entries e LEFT JOIN ca_meta m ON m.entry_id = e.id
           LEFT JOIN ca_issues i ON i.id = m.issue_id LEFT JOIN ca_orders o ON o.id = i.order_id
         WHERE e.deleted = false AND e.contractor = ${me} AND e.kind IN ('wound','sent') AND e.d >= ${START}::date
         GROUP BY e.d, e.stype, m.winding_type, o.order_no ORDER BY e.d, e.stype`;
     } catch (e) {
       rows = await sql`SELECT to_char(e.d,'YYYY-MM-DD') AS d, e.stype, '-' AS wt, NULL AS order_no,
-          COALESCE(SUM(CASE WHEN e.kind='wound' THEN e.qty END),0)::float AS made,
+          COALESCE(SUM(CASE WHEN e.kind='wound' THEN e.gross_qty END),0)::float AS gross_made,
+            COALESCE(SUM(CASE WHEN e.kind='wound' THEN e.rejected_qty END),0)::float AS rejected,
+            COALESCE(SUM(CASE WHEN e.kind='wound' THEN e.qty END),0)::float AS made,
           COALESCE(SUM(CASE WHEN e.kind='sent' THEN e.qty END),0)::float AS given
-        FROM wa_entries e WHERE e.deleted = false AND e.contractor = ${me} AND e.kind IN ('wound','sent') AND e.d >= ${START}::date
+        FROM wn_effective_entries e WHERE e.deleted = false AND e.contractor = ${me} AND e.kind IN ('wound','sent') AND e.d >= ${START}::date
         GROUP BY e.d, e.stype ORDER BY e.d, e.stype`;
     }
     // running held per stamping type, counted from START

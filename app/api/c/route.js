@@ -18,7 +18,7 @@ function normParty(p) {
 // Stamping/winding names this contractor has seen (own entries + Midland outward)
 async function stampTypes(sql, me, mid) {
   const set = new Set();
-  const a = await sql`SELECT DISTINCT stype FROM wa_entries WHERE deleted = false AND contractor = ${me} AND stype IS NOT NULL AND kind IN ('wound','stamp_in','transfer','sent')`;
+  const a = await sql`SELECT DISTINCT stype FROM wn_effective_entries WHERE deleted = false AND contractor = ${me} AND stype IS NOT NULL AND kind IN ('wound','stamp_in','transfer','sent')`;
   a.forEach(x => x.stype && set.add(x.stype));
   try {
     const m = mid !== undefined ? await mid : await midOut(sql);
@@ -47,7 +47,7 @@ export async function GET(req) {
       const midP = midOut(sql).then(r => r, () => null);
       const [iss, t, types, hold, stamp, added] = await Promise.all([
         openIssues(sql, me),
-        sql`SELECT COALESCE(SUM(qty),0)::float AS v FROM wa_entries WHERE deleted = false AND contractor = ${me} AND kind = 'wound' AND d = ${today}::date`,
+        sql`SELECT COALESCE(SUM(qty),0)::float AS v FROM wn_effective_entries WHERE deleted = false AND contractor = ${me} AND kind = 'wound' AND d = ${today}::date`,
         stampTypes(sql, me, midP),
         holds(sql, me),
         stampStock(sql, me, midP).catch(() => ({})),
@@ -61,17 +61,21 @@ export async function GET(req) {
       let rows;
       try {
         rows = await sql`SELECT to_char(e.d,'YYYY-MM-DD') AS d, e.stype, COALESCE(m.winding_type,'-') AS wt, o.order_no,
+            COALESCE(SUM(CASE WHEN e.kind='wound' THEN e.gross_qty END),0)::float AS gross_made,
+            COALESCE(SUM(CASE WHEN e.kind='wound' THEN e.rejected_qty END),0)::float AS rejected,
             COALESCE(SUM(CASE WHEN e.kind='wound' THEN e.qty END),0)::float AS made,
             COALESCE(SUM(CASE WHEN e.kind='sent' THEN e.qty END),0)::float AS given
-          FROM wa_entries e LEFT JOIN ca_meta m ON m.entry_id = e.id
+          FROM wn_effective_entries e LEFT JOIN ca_meta m ON m.entry_id = e.id
             LEFT JOIN ca_issues i ON i.id = m.issue_id LEFT JOIN ca_orders o ON o.id = i.order_id
           WHERE e.deleted = false AND e.contractor = ${me} AND e.kind IN ('wound','sent') AND e.d >= ${START}::date
           GROUP BY e.d, e.stype, m.winding_type, o.order_no ORDER BY e.d, e.stype`;
       } catch (e) {
         rows = await sql`SELECT to_char(e.d,'YYYY-MM-DD') AS d, e.stype, '-' AS wt, NULL AS order_no,
+            COALESCE(SUM(CASE WHEN e.kind='wound' THEN e.gross_qty END),0)::float AS gross_made,
+            COALESCE(SUM(CASE WHEN e.kind='wound' THEN e.rejected_qty END),0)::float AS rejected,
             COALESCE(SUM(CASE WHEN e.kind='wound' THEN e.qty END),0)::float AS made,
             COALESCE(SUM(CASE WHEN e.kind='sent' THEN e.qty END),0)::float AS given
-          FROM wa_entries e WHERE e.deleted = false AND e.contractor = ${me} AND e.kind IN ('wound','sent') AND e.d >= ${START}::date
+          FROM wn_effective_entries e WHERE e.deleted = false AND e.contractor = ${me} AND e.kind IN ('wound','sent') AND e.d >= ${START}::date
           GROUP BY e.d, e.stype ORDER BY e.d, e.stype`;
       }
       // running held per stamping type, counted from START, then cut to the date range
@@ -85,8 +89,8 @@ export async function GET(req) {
       let orders = [];
       try {
         orders = await sql`SELECT o.order_no, o.winding_type, o.stator_type, i.qty::float AS qty, to_char(o.due,'YYYY-MM-DD') AS due,
-            COALESCE((SELECT SUM(e.qty) FROM ca_meta m JOIN wa_entries e ON e.id = m.entry_id WHERE m.issue_id = i.id AND e.deleted = false AND e.kind='wound'),0)::float AS wound,
-            COALESCE((SELECT SUM(e.qty) FROM ca_meta m JOIN wa_entries e ON e.id = m.entry_id WHERE m.issue_id = i.id AND e.deleted = false AND e.kind='sent'),0)::float AS given
+            COALESCE((SELECT SUM(e.qty) FROM ca_meta m JOIN wn_effective_entries e ON e.id = m.entry_id WHERE m.issue_id = i.id AND e.deleted = false AND e.kind='wound'),0)::float AS wound,
+            COALESCE((SELECT SUM(e.qty) FROM ca_meta m JOIN wn_effective_entries e ON e.id = m.entry_id WHERE m.issue_id = i.id AND e.deleted = false AND e.kind='sent'),0)::float AS given
           FROM ca_issues i JOIN ca_orders o ON o.id = i.order_id WHERE i.contractor = ${me} ORDER BY i.id DESC`;
       } catch (e) { /* tables not created yet */ }
       return Response.json({ from, to, rows: out, orders, holds: await holds(sql, me), stamp: await stampStock(sql, me).catch(() => ({})), open: iss.rows.length });
@@ -129,7 +133,7 @@ export async function POST(req) {
       const h = (await holds(sql, me))[stype] || { held: 0 };
       if (qty > h.held) return Response.json({ error: 'You hold only ' + h.held + ' of ' + stype + '. Cannot give ' + qty }, { status: 409 });
     }
-    const dup = await sql`SELECT id FROM wa_entries WHERE deleted = false AND kind = ${kind} AND contractor = ${me}
+    const dup = await sql`SELECT id FROM wn_effective_entries WHERE deleted = false AND kind = ${kind} AND contractor = ${me}
       AND d = ${today}::date AND stype = ${stype} AND qty = ${qty} LIMIT 1`;
     if (dup.length) return Response.json({ error: 'Same entry is already saved today. Ask Jatin to edit it, or enter a different number.' }, { status: 409 });
     const party = kind === 'sent' ? (me === 'Sunil' ? 'Sunil' : 'Pandey ji') : null;

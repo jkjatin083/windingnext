@@ -31,8 +31,8 @@ export const myMid = (mid, me, cat) => mid.filter(r => r.contractor === me && r.
 // recvR/dispR are the same numbers limited to a date range (for the report).
 export function windStock(rows, me, from, to) {
   const m = {};
-  const g = (c, t) => m[c + '|' + t] || (m[c + '|' + t] = { c, t, recv: 0, disp: 0, sent: 0, recvR: 0, dispR: 0 });
-  rows.filter(r => r.kind === 'sent' && r.party === me).forEach(r => { const x = g(r.contractor, r.stype); x.recv += r.qty; if (from && r.d >= from && r.d <= to) x.recvR += r.qty; });
+  const g = (c, t) => m[c + '|' + t] || (m[c + '|' + t] = { c, t, recv: 0, disp: 0, sent: 0, recvR: 0, dispR: 0, gross: 0, rejected: 0 });
+  rows.filter(r => r.kind === 'sent' && r.party === me).forEach(r => { const x = g(r.contractor, r.stype); x.recv += r.qty; x.gross += Number(r.gross_qty ?? r.qty); x.rejected += Number(r.rejected_qty || 0); if (from && r.d >= from && r.d <= to) x.recvR += r.qty; });
   myMade(rows, me).forEach(r => { const x = g(r.party, r.stype); x.disp += r.qty; if (from && r.d >= from && r.d <= to) x.dispR += r.qty; });
   myDisp(rows, me).filter(r => r.party && r.stype).forEach(r => { g(r.party, r.stype).sent += r.qty; });
   return Object.values(m).sort((a, b) => (a.c + a.t).localeCompare(b.c + b.t));

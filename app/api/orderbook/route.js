@@ -66,9 +66,9 @@ export async function GET(req) {
         COALESCE((SELECT SUM(i.qty) FROM ca_issues i WHERE i.order_id = o.id),0)::int AS issued
       FROM ca_orders o WHERE o.cancelled = false ORDER BY o.id DESC LIMIT 200`;
     const issues = await sql`SELECT i.id, i.order_id, i.contractor, i.qty::int AS qty, o.order_no, o.winding_type, o.stator_type, o.rotor_item, to_char(o.due,'YYYY-MM-DD') AS due,
-        COALESCE((SELECT SUM(e.qty) FROM ca_meta m JOIN wa_entries e ON e.id = m.entry_id WHERE m.issue_id = i.id AND e.deleted = false AND e.kind = 'wound'),0)::int AS wound,
-        COALESCE((SELECT SUM(e.qty) FROM ca_meta m JOIN wa_entries e ON e.id = m.entry_id WHERE m.issue_id = i.id AND e.deleted = false AND e.kind = 'sent'),0)::int AS given,
-        COALESCE((SELECT string_agg(DISTINCT e.stype, ', ') FROM ca_meta m JOIN wa_entries e ON e.id = m.entry_id WHERE m.issue_id = i.id AND e.deleted = false AND e.kind = 'wound' AND e.stype IS DISTINCT FROM o.stator_type),'') AS used
+        COALESCE((SELECT SUM(e.qty) FROM ca_meta m JOIN wn_effective_entries e ON e.id = m.entry_id WHERE m.issue_id = i.id AND e.deleted = false AND e.kind = 'wound'),0)::int AS wound,
+        COALESCE((SELECT SUM(e.qty) FROM ca_meta m JOIN wn_effective_entries e ON e.id = m.entry_id WHERE m.issue_id = i.id AND e.deleted = false AND e.kind = 'sent'),0)::int AS given,
+        COALESCE((SELECT string_agg(DISTINCT e.stype, ', ') FROM ca_meta m JOIN wn_effective_entries e ON e.id = m.entry_id WHERE m.issue_id = i.id AND e.deleted = false AND e.kind = 'wound' AND e.stype IS DISTINCT FROM o.stator_type),'') AS used
       FROM ca_issues i JOIN ca_orders o ON o.id = i.order_id WHERE o.cancelled = false ORDER BY i.id DESC`;
 
     // Stamping each contractor holds = Midland stamping outward + manual receipts + transfers in - transfers out - wound
@@ -142,7 +142,7 @@ export async function GET(req) {
     // Overview: ready stators per contractor and ready motors per Pandey ji / Sunil
     let overview = null;
     try {
-      const ev = await sql`SELECT kind, contractor, party, stype, qty::float AS q, to_char(d,'YYYY-MM-DD') AS d FROM wa_entries
+      const ev = await sql`SELECT kind, contractor, party, stype, qty::float AS q, to_char(d,'YYYY-MM-DD') AS d FROM wn_effective_entries
         WHERE deleted = false AND d >= ${START}::date AND kind IN ('wound','sent','made','mdispatch','dispatch') ORDER BY d, id`;
       const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(new Date());
       const days = d => Math.max(0, Math.round((Date.parse(today) - Date.parse(d)) / 86400000));

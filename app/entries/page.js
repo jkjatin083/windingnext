@@ -22,8 +22,8 @@ export default function Entries() {
       {R ? (
         <>
           <div className="kp">
-            <div className="card a"><small>Made</small><b>{fmt(R.made)}</b></div>
-            <div className="card"><small>Given</small><b>{fmt(R.given)}</b></div>
+            <div className="card a"><small>Made (good)</small><b>{fmt(R.made)}</b></div>
+            <div className="card"><small>Accepted Give</small><b>{fmt(R.given)}</b></div>
             <div className="card a"><small>Held now</small><b>{fmt(R.heldNow)}</b></div>
           </div>
           <div className="card">
@@ -38,7 +38,7 @@ export default function Entries() {
           </div>
         </>
       ) : null}
-      <Nav />
+      <p className="note">Made and Given are net of confirmed rejected stators. Gross source entries stay unchanged. Date totals are restated on original production dates.</p><Nav />
     </div>
   );
 }

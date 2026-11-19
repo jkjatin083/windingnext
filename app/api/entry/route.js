@@ -48,7 +48,7 @@ export async function POST(req) {
         return Response.json({ error: 'You hold only ' + h.held + ' of ' + stype + '. Cannot give ' + qty }, { status: 409 });
       }
     }
-    const dup = await sql`SELECT id FROM wa_entries WHERE deleted = false AND kind = ${kind} AND contractor = ${me}
+    const dup = await sql`SELECT id FROM wn_effective_entries WHERE deleted = false AND kind = ${kind} AND contractor = ${me}
       AND d = ${today}::date AND stype = ${stype} AND qty = ${qty} LIMIT 1`;
     if (dup.length) {
       return Response.json({ error: 'Same entry is already saved today. Ask Jatin to edit it, or enter a different number.' }, { status: 409 });

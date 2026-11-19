@@ -13,7 +13,7 @@ export async function GET(req) {
     const midP = midOut(sql).then(r => r, () => null);
     const [iss, t, hold, stamp] = await Promise.all([
       openIssues(sql, me),
-      sql`SELECT COALESCE(SUM(qty),0)::float AS v FROM wa_entries WHERE deleted = false AND contractor = ${me} AND kind = 'wound' AND d = ${today}::date`,
+      sql`SELECT COALESCE(SUM(qty),0)::float AS v FROM wn_effective_entries WHERE deleted = false AND contractor = ${me} AND kind = 'wound' AND d = ${today}::date`,
       holds(sql, me),
       stampStock(sql, me, midP).catch(() => ({}))
     ]);

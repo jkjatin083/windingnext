@@ -40,17 +40,17 @@ export default function Hisab() {
             <div className="card">
               <div className="lab">Stator hisab</div>
               <table>
-                <thead><tr><th>Type</th><th>Made</th><th>Given</th><th>Held</th></tr></thead>
+                <thead><tr><th>Type</th><th>Made</th><th>Accepted Give</th><th>Held</th></tr></thead>
                 <tbody>
                   {holdKeys.map(k => (
-                    <tr key={k}><td>{k}</td><td>{fmt(R.holds[k].made)}</td><td>{fmt(R.holds[k].given)}</td><td className="g">{fmt(R.holds[k].held)}</td></tr>
+                    <tr key={k}><td>{k}</td><td>{fmt(R.holds[k].made)}{R.holds[k].rejected>0&&<small style={{display:'block'}}>Rejected {fmt(R.holds[k].rejected)}</small>}</td><td>{fmt(R.holds[k].given)}</td><td className="g">{fmt(R.holds[k].held)}</td></tr>
                   ))}
                 </tbody>
               </table>
             </div>
           ) : null}
           {!stampKeys.length && !holdKeys.length ? <div className="card"><div className="note">No entries yet.</div></div> : null}
-          <div className="note">Numbers counted from 1 Oct 2026.</div>
+          <div className="note">Net good stators since 1 Oct 2026. Rejected pieces do not restore stamping automatically.</div>
         </>
       ) : null}
       <Nav />

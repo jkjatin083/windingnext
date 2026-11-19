@@ -48,11 +48,11 @@ export default function Report() {
       </div>
       {err ? <div className="card"><div className="err">{err}</div></div> : null}
       {!R && !err ? <div className="card"><div className="note">Loading...</div></div> : null}
-      {R && rtab === 'date' ? (
+      {R&&<div className="card"><div className="lab">Rejected stators</div><b>{fmt(R.rows.reduce((n,r)=>n+Number(r.rejected||0),0))}</b><p className="note">Included once in final Record Return. Scrap kg is separate from piece count.</p></div>}{R && rtab === 'date' ? (
         <>
           <div className="kp">
-            <div className="card a"><small>Made</small><b>{fmt(R.rows.reduce((a, r) => a + r.made, 0))}</b></div>
-            <div className="card"><small>Given</small><b>{fmt(R.rows.reduce((a, r) => a + r.given, 0))}</b></div>
+            <div className="card a"><small>Made (good)</small><b>{fmt(R.rows.reduce((a, r) => a + r.made, 0))}</b></div>
+            <div className="card"><small>Accepted Give</small><b>{fmt(R.rows.reduce((a, r) => a + r.given, 0))}</b></div>
             <div className="card a"><small>Held now</small><b>{fmt(Object.values(R.holds || {}).reduce((a, x) => a + x.held, 0))}</b></div>
           </div>
           {Object.keys(R.stamp || {}).length ? (
@@ -81,7 +81,7 @@ export default function Report() {
                     {w.rows.map((r, j) => (
                       <tr key={j}>
                         <td>{dm(r.d)}</td>
-                        <td style={{ color: 'var(--a)' }}>{r.made ? fmt(r.made) : ''}</td>
+                        <td style={{ color: 'var(--a)' }}>{r.made ? fmt(r.made) : ''}{r.rejected>0&&<small style={{display:'block'}}>Rejected {fmt(r.rejected)}</small>}</td>
                         <td style={{ color: 'var(--red)' }}>{r.given ? fmt(r.given) : ''}</td>
                         <td><b>{fmt(r.held)}</b></td>
                       </tr>
@@ -126,7 +126,7 @@ export default function Report() {
           ))}
         </>
       ) : null}
-      <Nav />
+      <p className="note">Made and Given are net of confirmed rejected stators. Gross source entries stay unchanged. Date totals are restated on original production dates.</p><Nav />
     </div>
   );
 }

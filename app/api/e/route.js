@@ -59,8 +59,8 @@ function violation(before, after) {
 }
 
 async function liveRows(sql) {
-  return await sql`SELECT id, kind, contractor, party, stype, qty::float AS qty, to_char(d, 'YYYY-MM-DD') AS d, note
-    FROM wa_entries WHERE deleted = false AND d >= ${START}::date ORDER BY d, id`;
+  return await sql`SELECT id, kind, contractor, party, stype, qty::float AS qty, gross_qty::float AS gross_qty, rejected_qty::float AS rejected_qty, to_char(d, 'YYYY-MM-DD') AS d, note
+    FROM wn_effective_entries WHERE deleted = false AND d >= ${START}::date ORDER BY d, id`;
 }
 
 export async function GET(req) {
@@ -69,8 +69,8 @@ export async function GET(req) {
     const sql = db();
     const q = Object.fromEntries(new URL(req.url).searchParams.entries());
     const showDeleted = q.app === 'deleted';
-    const rows = await sql`SELECT e.id, e.kind, e.contractor, e.party, e.stype, e.qty::float AS qty, to_char(e.d, 'YYYY-MM-DD') AS d, e.note, e.deleted
-      FROM wa_entries e WHERE e.d >= ${START}::date AND e.deleted = ${showDeleted} ORDER BY e.d DESC, e.id DESC LIMIT 600`;
+    const rows = await sql`SELECT e.id, e.kind, e.contractor, e.party, e.stype, e.gross_qty::float AS qty, e.qty::float AS net_qty, e.rejected_qty::float AS rejected_qty, to_char(e.d, 'YYYY-MM-DD') AS d, e.note, e.deleted
+      FROM wn_effective_entries e WHERE e.d >= ${START}::date AND e.deleted = ${showDeleted} ORDER BY e.d DESC, e.id DESC LIMIT 600`;
     let kup = {};
     try { (await sql`SELECT entry_id, kuppa_qty::float AS k FROM wa_dispatch_kuppa`).forEach(x => { kup[x.entry_id] = x.k; }); } catch (e) { /* table missing */ }
     let out = rows.map(r => ({ ...r, text: label(r), kuppa: kup[r.id] || 0 }));
@@ -91,13 +91,13 @@ export async function GET(req) {
     const key = (c, t) => nz(c) + '|' + nz(t);
     try {
       pickIssues = await sql`SELECT i.id, i.contractor, o.order_no, o.winding_type, o.stator_type,
-          (i.qty - COALESCE((SELECT SUM(e.qty) FROM ca_meta m JOIN wa_entries e ON e.id = m.entry_id WHERE m.issue_id = i.id AND e.deleted = false AND e.kind = 'wound'),0))::float AS left
+          (i.qty - COALESCE((SELECT SUM(e.qty) FROM ca_meta m JOIN wn_effective_entries e ON e.id = m.entry_id WHERE m.issue_id = i.id AND e.deleted = false AND e.kind = 'wound'),0))::float AS left
         FROM ca_issues i JOIN ca_orders o ON o.id = i.order_id WHERE i.closed = false AND o.cancelled = false ORDER BY i.contractor, i.id`;
       mid.forEach(x => { const c = CONTRACTORS.find(n => nz(n) === String(x.party_name || '').toLowerCase().replace(/[^a-z]/g, '')); if (c) sb[key(c, x.item)] = (sb[key(c, x.item)] || 0) + x.q; });
       live.forEach(r => {
         if (!r.stype) return;
         if (r.kind === 'stamp_in') sb[key(r.contractor, r.stype)] = (sb[key(r.contractor, r.stype)] || 0) + r.qty;
-        if (r.kind === 'wound') { sb[key(r.contractor, r.stype)] = (sb[key(r.contractor, r.stype)] || 0) - r.qty; hd[key(r.contractor, r.stype)] = (hd[key(r.contractor, r.stype)] || 0) + r.qty; }
+        if (r.kind === 'wound') { sb[key(r.contractor, r.stype)] = (sb[key(r.contractor, r.stype)] || 0) - Number(r.gross_qty ?? r.qty); hd[key(r.contractor, r.stype)] = (hd[key(r.contractor, r.stype)] || 0) + r.qty; }
         if (r.kind === 'sent') hd[key(r.contractor, r.stype)] = (hd[key(r.contractor, r.stype)] || 0) - r.qty;
         if (r.kind === 'transfer') { sb[key(r.contractor, r.stype)] = (sb[key(r.contractor, r.stype)] || 0) - r.qty; if (r.party) sb[key(r.party, r.stype)] = (sb[key(r.party, r.stype)] || 0) + r.qty; }
       });
@@ -154,7 +154,7 @@ export async function POST(req) {
         stype = wa ? wa.name : held[0].stype;
       } else {
         isu = await sql`SELECT i.id, i.qty::float AS iq, o.stator_type, o.winding_type,
-            COALESCE((SELECT SUM(e.qty) FROM ca_meta m JOIN wa_entries e ON e.id = m.entry_id WHERE m.issue_id = i.id AND e.deleted = false AND e.kind = 'wound'),0)::float AS wound
+            COALESCE((SELECT SUM(e.qty) FROM ca_meta m JOIN wn_effective_entries e ON e.id = m.entry_id WHERE m.issue_id = i.id AND e.deleted = false AND e.kind = 'wound'),0)::float AS wound
           FROM ca_issues i JOIN ca_orders o ON o.id = i.order_id WHERE i.id = ${parseInt(b.issue_id, 10) || 0} AND i.contractor = ${who} AND i.closed = false AND o.cancelled = false`;
         if (!isu.length) return Response.json({ error: 'Choose the winding (order) of this contractor' }, { status: 400 });
         stype = isu[0].stator_type || '';
@@ -202,6 +202,7 @@ export async function POST(req) {
 
     const all = await liveRows(sql);
     const cur = all.find(r => r.id === id);
+    if (cur?.rejected_qty) return Response.json({error:'Source Made/Give has a final rejection return. History is locked; review the return instead.'},{status:409});
     if (!cur) return Response.json({ error: 'Entry not found (already deleted?)' }, { status: 404 });
     if (cur.kind === 'wound') await refreshWire(cur.contractor, 'ADMIN');
     let after, newQty = cur.qty, newD = cur.d;
@@ -225,7 +226,7 @@ export async function POST(req) {
         try {
           const iss = await sql`SELECT i.id, i.qty::float AS qty FROM ca_meta m JOIN ca_issues i ON i.id = m.issue_id WHERE m.entry_id = ${id}`;
           if (iss.length) {
-            const o = await sql`SELECT COALESCE(SUM(e.qty),0)::float AS v FROM ca_meta m JOIN wa_entries e ON e.id = m.entry_id WHERE m.issue_id = ${iss[0].id} AND e.deleted = false AND e.kind = 'wound' AND e.id <> ${id}`;
+            const o = await sql`SELECT COALESCE(SUM(e.qty),0)::float AS v FROM ca_meta m JOIN wn_effective_entries e ON e.id = m.entry_id WHERE m.issue_id = ${iss[0].id} AND e.deleted = false AND e.kind = 'wound' AND e.id <> ${id}`;
             if (o[0].v + newQty > iss[0].qty) return Response.json({ error: 'This is more than the order quantity issued to this contractor (' + fmt(iss[0].qty) + ')' }, { status: 409 });
           }
         } catch (e) { /* order tables missing */ }
@@ -260,7 +261,7 @@ export async function POST(req) {
         } catch (e2) { /* no order link */ }
         // balance AFTER the update/delete above
         const bal = (await sql`SELECT COALESCE(SUM(CASE WHEN x.kind = 'wound' THEN x.qty ELSE -x.qty END), 0)::float AS b
-          FROM wa_entries x WHERE x.deleted = false AND x.contractor = ${cur.contractor} AND x.stype = ${cur.stype} AND x.kind IN ('wound','sent') AND x.d >= ${START}::date`)[0].b;
+          FROM wn_effective_entries x WHERE x.deleted = false AND x.contractor = ${cur.contractor} AND x.stype = ${cur.stype} AND x.kind IN ('wound','sent') AND x.d >= ${START}::date`)[0].b;
         for (const rName of people) {
           const cc = contacts.find(x => x.name === rName);
           if (cc && !cc.alerts_on) continue;

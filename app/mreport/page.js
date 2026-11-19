@@ -42,7 +42,7 @@ export default function Report() {
         {!fromD ? (
           <>
             <table>
-              <thead><tr><th></th><th>Received</th><th>Used</th><th>Balance</th></tr></thead>
+              <thead><tr><th></th><th>Accepted</th><th>Used</th><th>Balance</th></tr></thead>
               <tbody><tr>
                 <td style={tot}>Total</td><td style={tot}>{fmt(liya)}</td><td style={tot}>{fmt(t.cov)}</td>
                 <td style={{ ...tot, ...(liya - t.cov < 0 ? red : {}) }}>{fmt(liya - t.cov)}</td>
@@ -292,7 +292,7 @@ export default function Report() {
           </div>
         </>
       ) : null}
-      <Nav />
+      {ws2.some(x=>x.rejected>0)&&<div className="card"><div className="lab">Rejected stators returned</div>{ws2.filter(x=>x.rejected>0).map(x=><div key={x.c+'|'+x.t} style={{padding:'12px 0',borderTop:'1px solid var(--line)'}}><b>{x.c} · {x.t}</b><p className="note">Received {fmt(x.gross)} · rejected back {fmt(x.rejected)} · accepted {fmt(x.recv)} · motors {fmt(x.disp)}</p><b>{fmt(x.recv-x.disp)} available</b></div>)}<p className="note">Updated from the contractor’s confirmed final Record Return. No second entry needed.</p></div>}<Nav />
     </div>
   );
 }

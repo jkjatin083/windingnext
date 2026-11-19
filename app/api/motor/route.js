@@ -31,10 +31,10 @@ function partOf(x) {
 }
 
 async function motorsInHand(sql, me, src, stype) {
-  const m = await sql`SELECT COALESCE(SUM(qty),0)::float AS v FROM wa_entries
+  const m = await sql`SELECT COALESCE(SUM(qty),0)::float AS v FROM wn_effective_entries
     WHERE deleted = false AND kind = 'made' AND contractor = ${me}
       AND (${src}::text IS NULL OR (party = ${src} AND stype = ${stype}))`;
-  const x = await sql`SELECT COALESCE(SUM(qty),0)::float AS v FROM wa_entries
+  const x = await sql`SELECT COALESCE(SUM(qty),0)::float AS v FROM wn_effective_entries
     WHERE deleted = false AND kind = 'mdispatch' AND contractor = ${me}
       AND (${src}::text IS NULL OR (party = ${src} AND stype = ${stype}))`;
   return { made: m[0].v, sent: x[0].v };
@@ -42,7 +42,7 @@ async function motorsInHand(sql, me, src, stype) {
 
 async function checkDispatch(sql, me, qty, d, src, stype) {
   if (!src || !stype) return 'Select the winding (contractor - type) first';
-  const dup = await sql`SELECT id FROM wa_entries WHERE deleted = false AND kind = 'mdispatch' AND contractor = ${me}
+  const dup = await sql`SELECT id FROM wn_effective_entries WHERE deleted = false AND kind = 'mdispatch' AND contractor = ${me}
     AND d = ${d}::date AND party = ${src} AND stype = ${stype} AND qty = ${qty} LIMIT 1`;
   if (dup.length) return 'Duplicate: the same dispatch (date, winding, motors) is already saved';
   const h = await motorsInHand(sql, me, src, stype);
@@ -51,9 +51,9 @@ async function checkDispatch(sql, me, qty, d, src, stype) {
 }
 
 async function windAvail(sql, me, src, stype, excludeSentAmount) {
-  const a = await sql`SELECT COALESCE(SUM(qty),0)::float AS v FROM wa_entries
+  const a = await sql`SELECT COALESCE(SUM(qty),0)::float AS v FROM wn_effective_entries
     WHERE deleted = false AND kind = 'sent' AND party = ${me} AND contractor = ${src} AND stype = ${stype}`;
-  const b = await sql`SELECT COALESCE(SUM(qty),0)::float AS v FROM wa_entries
+  const b = await sql`SELECT COALESCE(SUM(qty),0)::float AS v FROM wn_effective_entries
     WHERE deleted = false AND kind IN ('made', 'dispatch') AND contractor = ${me} AND party = ${src} AND stype = ${stype}`;
   return a[0].v - (excludeSentAmount || 0) - b[0].v;
 }
@@ -63,11 +63,11 @@ async function checkMade(sql, me, qty, kq, d, src, stype) {
   // 1) double entry
   let dup;
   try {
-    dup = await sql`SELECT e.id FROM wa_entries e LEFT JOIN wa_dispatch_kuppa k ON k.entry_id = e.id
+    dup = await sql`SELECT e.id FROM wn_effective_entries e LEFT JOIN wa_dispatch_kuppa k ON k.entry_id = e.id
       WHERE e.deleted = false AND e.kind IN ('made', 'dispatch') AND e.contractor = ${me} AND e.d = ${d}::date
         AND e.party = ${src} AND e.stype = ${stype} AND e.qty = ${qty} AND COALESCE(k.kuppa_qty,0) = ${kq} LIMIT 1`;
   } catch (e) {
-    dup = await sql`SELECT id FROM wa_entries WHERE deleted = false AND kind IN ('made', 'dispatch') AND contractor = ${me}
+    dup = await sql`SELECT id FROM wn_effective_entries WHERE deleted = false AND kind IN ('made', 'dispatch') AND contractor = ${me}
       AND d = ${d}::date AND party = ${src} AND stype = ${stype} AND qty = ${qty} LIMIT 1`;
   }
   if (dup.length) return 'Duplicate: the same motors entry (date, winding, motors) is already saved';
@@ -76,11 +76,11 @@ async function checkMade(sql, me, qty, kq, d, src, stype) {
   if (qty > av) return 'Not enough winding: ' + av + ' available from ' + src + ' - ' + stype + ', you entered ' + qty;
   // 3) parts balances must not go negative
   if (!PARTS_CHECK) return null;
-  const mo = await sql`SELECT COALESCE(SUM(qty),0)::float AS v FROM wa_entries WHERE deleted = false AND kind IN ('made', 'dispatch') AND party IS NOT NULL AND contractor = ${me}`;
+  const mo = await sql`SELECT COALESCE(SUM(qty),0)::float AS v FROM wn_effective_entries WHERE deleted = false AND kind IN ('made', 'dispatch') AND party IS NOT NULL AND contractor = ${me}`;
   let ku = 0;
   try {
     const k = await sql`SELECT COALESCE(SUM(k.kuppa_qty),0)::float AS v FROM wa_dispatch_kuppa k
-      JOIN wa_entries e ON e.id = k.entry_id WHERE e.deleted = false AND e.kind IN ('made', 'dispatch') AND e.party IS NOT NULL AND e.contractor = ${me}`;
+      JOIN wn_effective_entries e ON e.id = k.entry_id WHERE e.deleted = false AND e.kind IN ('made', 'dispatch') AND e.party IS NOT NULL AND e.contractor = ${me}`;
     ku = k[0].v;
   } catch (e) { /* table not created yet */ }
   const recv = { bush: 0, capacitor: 0, kuppa: 0, cover: 0 };
@@ -113,7 +113,7 @@ async function addEntry(sql, me, b) {
   if (kind !== 'made' && kind !== 'mdispatch') return { status: 400, body: { error: 'Invalid entry type' } };
   const qty = Number(b.qty);
   const d = String(b.d || '');
-  if (!(qty > 0) || qty > 10000000) return { status: 400, body: { error: 'Invalid quantity' } };
+  if (!Number.isSafeInteger(qty) || !(qty > 0) || qty > 10000000) return { status: 400, body: { error: 'Invalid quantity' } };
   if (!/^\d{4}-\d{2}-\d{2}$/.test(d) || d < START) return { status: 400, body: { error: 'Date must be 1 Oct 2026 or later' } };
   const stype = String(b.stype || '').trim().slice(0, 60);
   if (!stype) return { status: 400, body: { error: 'Enter the stamping type' } };
@@ -155,9 +155,9 @@ export async function GET(req) {
   try {
     const sql = db();
     const rows = await sql`
-      SELECT id, kind, contractor, party, stype, qty::float AS qty,
+      SELECT id, kind, contractor, party, stype, qty::float AS qty, gross_qty::float AS gross_qty, rejected_qty::float AS rejected_qty,
              to_char(d, 'YYYY-MM-DD') AS d, note
-      FROM wa_entries
+      FROM wn_effective_entries
       WHERE deleted = false AND d >= ${START}::date
         AND (contractor = ${me} OR (party = ${me} AND kind IN ('transfer', 'sent')))
       ORDER BY d, id`;
@@ -188,36 +188,10 @@ export async function POST(req) {
       return Response.json(r.body, { status: r.status });
     }
     if (b.action === 'edit') {
-      const id = parseInt(b.id, 10);
-      if (!id) return Response.json({ error: 'Invalid id' }, { status: 400 });
-      const c = await sql`SELECT kind, contractor, party, stype, to_char(d, 'YYYY-MM-DD') AS d FROM wa_entries WHERE id = ${id} AND deleted = false`;
-      if (!c.length || c[0].contractor !== me) return Response.json({ error: 'Entry not found for this person' }, { status: 403 });
-      const cur = c[0];
-      // Same rule as live: contractors can edit only today's entries (admin edits come from the admin Entries tab)
-      const td = todayIST();
-      if (cur.d !== td) return Response.json({ error: 'You can only edit today\'s entries. Ask Jatin to edit older ones.' }, { status: 403 });
-      if (String(b.d || '') !== td) return Response.json({ error: 'The date must stay today. Ask Jatin to change the date.' }, { status: 403 });
-      if (cur.kind === 'dispatch') return Response.json({ error: 'Old dispatch entries cannot be edited. Ask Jatin.' }, { status: 400 });
-      if (cur.kind !== 'made' && cur.kind !== 'mdispatch') return Response.json({ error: 'This entry cannot be edited here' }, { status: 400 });
-      const nb = { kind: cur.kind, party: cur.party, stype: cur.stype, qty: b.qty, d: b.d, note: b.note, kuppa: cur.kind === 'made' ? b.kuppa : 0 };
-      await sql`UPDATE wa_entries SET deleted = true WHERE id = ${id}`;
-      const r2 = await addEntry(sql, me, nb);
-      const undo = async (nid) => {
-        if (nid) await sql`UPDATE wa_entries SET deleted = true WHERE id = ${nid}`;
-        await sql`UPDATE wa_entries SET deleted = false WHERE id = ${id}`;
-      };
-      if (r2.status !== 200) { await undo(null); return Response.json(r2.body, { status: r2.status }); }
-      const nid = r2.body.id;
-      const ne = await sql`SELECT party, stype FROM wa_entries WHERE id = ${nid}`;
-      for (const k of [{ p: cur.party, s: cur.stype }, { p: ne[0].party, s: ne[0].stype }]) {
-        if (cur.kind === 'made') {
-          const h = await motorsInHand(sql, me, k.p, k.s);
-          if (h.made - h.sent < 0) { await undo(nid); return Response.json({ error: 'Cannot save: motors were already dispatched from this winding' }, { status: 409 }); }
-          if ((await windAvail(sql, me, k.p, k.s, 0)) < 0) { await undo(nid); return Response.json({ error: 'Cannot save: winding would go negative' }, { status: 409 }); }
-        }
-      }
-      try { await sql`INSERT INTO ca_meta (entry_id, issue_id) SELECT ${nid}, issue_id FROM ca_meta WHERE entry_id = ${id} ON CONFLICT DO NOTHING`; } catch (e) { /* keep the order tag on edit */ }
-      return Response.json({ ok: true, id: nid });
+      const id=Number(b.id),qty=Number(b.qty),kuppa=Number(b.kuppa||0),d=String(b.d||'');
+      if(!Number.isSafeInteger(id)||id<=0||!Number.isSafeInteger(qty)||qty<=0||qty>10000000||!Number.isSafeInteger(kuppa)||kuppa<0||kuppa>qty||d!==todayIST())return Response.json({error:'Enter a whole motors count, valid kuppa count and today’s date'},{status:400});
+      const saved=await sql`SELECT wn_motor_edit(${id},${me},${qty},${d}::date,${kuppa},${String(b.note||'').trim().slice(0,100)}) AS id`;
+      return Response.json({ok:true,id:saved[0].id});
     }
     return Response.json({ error: 'Invalid action' }, { status: 400 });
   } catch (e) {

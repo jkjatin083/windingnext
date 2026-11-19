@@ -20,7 +20,7 @@ function doneDate(list, qty) {
 async function pipeline(sql, orders) {
   const iss = await sql`SELECT id, order_id, contractor, qty::int AS qty, to_char(issued_at AT TIME ZONE 'Asia/Kolkata','YYYY-MM-DD') AS d FROM ca_issues ORDER BY id`;
   const ent = await sql`SELECT e.kind, e.contractor, e.party, e.qty::float AS q, to_char(e.d,'YYYY-MM-DD') AS d, m.issue_id
-    FROM wa_entries e LEFT JOIN ca_meta m ON m.entry_id = e.id
+    FROM wn_effective_entries e LEFT JOIN ca_meta m ON m.entry_id = e.id
     WHERE e.deleted = false AND e.d >= ${START}::date AND e.kind IN ('wound','made','mdispatch') ORDER BY e.d, e.id`;
   const res = {};
   // Every stage comes from entries tagged to the issue (order): winding by the contractor page, motors and dispatch by the motor app.
@@ -75,7 +75,7 @@ function inHand(ev) {
 
 // Ready stators per contractor (wound - given) and ready motors per Pandey ji / Sunil (made - dispatched)
 async function overviewData(sql) {
-  const ev = await sql`SELECT kind, contractor, party, stype, qty::float AS q, to_char(d,'YYYY-MM-DD') AS d FROM wa_entries
+  const ev = await sql`SELECT kind, contractor, party, stype, qty::float AS q, to_char(d,'YYYY-MM-DD') AS d FROM wn_effective_entries
     WHERE deleted = false AND d >= ${START}::date AND kind IN ('wound','sent','made','mdispatch','dispatch') ORDER BY d, id`;
   const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(new Date());
   const days = d => Math.max(0, Math.round((Date.parse(today) - Date.parse(d)) / 86400000));

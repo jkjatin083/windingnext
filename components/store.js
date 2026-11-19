@@ -42,7 +42,9 @@ export function useApi(path) {
     fetchJson(path)
       .then(j => { if (j && live) { cache[path] = j; setData(j); } })
       .catch(e => { if (live) setErr(e.message); });
-    return () => { live = false; };
+    const refresh=()=>{if(document.visibilityState==='visible')fetchJson(path).then(j=>{if(j&&live){cache[path]=j;setData(j);setErr('');}}).catch(e=>{if(live)setErr(e.message);});};
+    window.addEventListener('focus',refresh);
+    return () => { live = false; window.removeEventListener('focus',refresh); };
   }, [path]);
   const reload = () => fetchJson(path)
     .then(j => { if (j) { cache[path] = j; setData(j); } return j; })

@@ -186,7 +186,7 @@ export default function EAdmin() {
           </div>
         </div>
       ) : null}
-      <Nav />
+      <p className="note">Made/Give entries keep their original quantities. Confirmed rejection-linked sources are locked; contractor and motor balances use net quantities.</p><Nav />
     </div>
   );
 }
