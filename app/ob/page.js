@@ -1,5 +1,6 @@
 'use client';
 // Admin Order Book - Overview. Port of the live orderbook.html overview tab.
+import Rejections from '../../components/rejections';
 import Link from 'next/link';
 import { useApi } from '../../components/store';
 import Nav from '../../components/nav';
@@ -112,7 +113,7 @@ export default function ObOverview() {
           ) : null}
         </>
       ) : null}
-      <Nav />
+      <Rejections/><Nav />
     </div>
   );
 }

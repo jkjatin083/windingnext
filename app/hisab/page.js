@@ -1,4 +1,5 @@
 'use client';
+import Rejections from '../../components/rejections';
 import { useApi } from '../../components/store';
 import Nav from '../../components/nav';
 import Top from '../../components/top';
@@ -18,7 +19,7 @@ export default function Hisab() {
   return (
     <div className="w">
       <Top date={dm(new Date().toISOString().slice(0, 10))} />
-      <h1>Hisab</h1>
+      <h1>Hisab</h1><Rejections/>
       {err ? <div className="card"><div className="err">{err}</div></div> : null}
       {!R && !err ? <div className="card"><div className="note">Loading...</div></div> : null}
       {R ? (
@@ -43,7 +44,7 @@ export default function Hisab() {
                 <thead><tr><th>Type</th><th>Made</th><th>Accepted Give</th><th>Held</th></tr></thead>
                 <tbody>
                   {holdKeys.map(k => (
-                    <tr key={k}><td>{k}</td><td>{fmt(R.holds[k].made)}{R.holds[k].rejected>0&&<small style={{display:'block'}}>Rejected {fmt(R.holds[k].rejected)}</small>}</td><td>{fmt(R.holds[k].given)}</td><td className="g">{fmt(R.holds[k].held)}</td></tr>
+                    <tr key={k}><td>{k}</td><td>{fmt(R.holds[k].made)}{R.holds[k].rejected>0&&<small style={{display:'block',color:'var(--red)'}}>Rejection {fmt(R.holds[k].rejected)}</small>}</td><td>{fmt(R.holds[k].given)}</td><td className="g">{fmt(R.holds[k].held)}</td></tr>
                   ))}
                 </tbody>
               </table>

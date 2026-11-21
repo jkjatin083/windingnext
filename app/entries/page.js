@@ -1,4 +1,5 @@
 'use client';
+import Rejections from '../../components/rejections';
 import { useApi } from '../../components/store';
 import Nav from '../../components/nav';
 import Top from '../../components/top';
@@ -16,7 +17,7 @@ export default function Entries() {
   return (
     <div className="w">
       <Top date={R ? dm(R.to) : ''} />
-      <h1>Entries</h1>
+      <h1>Entries</h1><Rejections/>
       {err ? <div className="card"><div className="err">{err}</div></div> : null}
       {!R && !err ? <div className="card"><div className="note">Loading...</div></div> : null}
       {R ? (

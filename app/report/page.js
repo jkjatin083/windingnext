@@ -1,6 +1,7 @@
 'use client';
 // Contractor App 1 - Report. Exact port of the live app1.html Report tab:
 // Date / Type / Order segments with the same cards, bars and tables.
+import Rejections from '../../components/rejections';
 import { useState } from 'react';
 import { useApi } from '../../components/store';
 import Nav from '../../components/nav';
@@ -48,7 +49,7 @@ export default function Report() {
       </div>
       {err ? <div className="card"><div className="err">{err}</div></div> : null}
       {!R && !err ? <div className="card"><div className="note">Loading...</div></div> : null}
-      {R&&<div className="card"><div className="lab">Rejected stators</div><b>{fmt(R.rows.reduce((n,r)=>n+Number(r.rejected||0),0))}</b><p className="note">Included once in final Record Return. Scrap kg is separate from piece count.</p></div>}{R && rtab === 'date' ? (
+      <Rejections/>{R&&<div className="card"><div className="lab" style={{color:'var(--red)'}}>Rejected stators</div><b>{fmt(R.rows.reduce((n,r)=>n+Number(r.rejected||0),0))}</b><p className="note">Confirmed rejections, including Admin adjustments. Scrap kg is separate from piece count.</p></div>}{R && rtab === 'date' ? (
         <>
           <div className="kp">
             <div className="card a"><small>Made (good)</small><b>{fmt(R.rows.reduce((a, r) => a + r.made, 0))}</b></div>
@@ -81,7 +82,7 @@ export default function Report() {
                     {w.rows.map((r, j) => (
                       <tr key={j}>
                         <td>{dm(r.d)}</td>
-                        <td style={{ color: 'var(--a)' }}>{r.made ? fmt(r.made) : ''}{r.rejected>0&&<small style={{display:'block'}}>Rejected {fmt(r.rejected)}</small>}</td>
+                        <td style={{ color: 'var(--a)' }}>{r.made ? fmt(r.made) : ''}{r.rejected>0&&<small style={{display:'block',color:'var(--red)'}}>Rejection {fmt(r.rejected)}</small>}</td>
                         <td style={{ color: 'var(--red)' }}>{r.given ? fmt(r.given) : ''}</td>
                         <td><b>{fmt(r.held)}</b></td>
                       </tr>

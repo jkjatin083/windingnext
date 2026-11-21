@@ -16,7 +16,7 @@ export async function GET(req) {
     catch (e) { return Response.json({ error: 'Run the WhatsApp alerts SQL in Neon first (wa_alerts.sql).' }, { status: 500 }); }
     const [contacts, log, cnt] = await Promise.all([
       sql`SELECT name, phone, alerts_on FROM wa_contacts`,
-      sql`SELECT id, event, recipient, status, error, kind, contractor, party, wtype, qty::float AS qty, to_char(d, 'YYYY-MM-DD') AS d,
+      sql`SELECT id, event, recipient, status, error, rejection_ref, reason, kind, contractor, party, wtype, qty::float AS qty, to_char(d, 'YYYY-MM-DD') AS d,
             bal_after::float AS bal_after, attempts,
             to_char(created_at AT TIME ZONE 'Asia/Kolkata', 'DD Mon HH12:MI am') AS at
           FROM wa_outbox ORDER BY id DESC LIMIT 40`,
@@ -31,7 +31,7 @@ export async function GET(req) {
       waiting: cnt[0].waiting, monthSent: cnt[0].month_sent,
       people: WHO.map(n => ({ name: n, phone: (cm[n] && cm[n].phone) || '', alerts_on: cm[n] ? cm[n].alerts_on : true })),
       log: log.map(r => ({ id: r.id, at: r.at, status: r.status, error: r.error, recipient: r.recipient, event: r.event,
-        what: r.event === 'test' ? 'Test message' : (r.event === 'edited' ? 'Corrected to ' : r.event === 'deleted' ? 'Removed ' : (r.event === 'made' ? 'Made ' : 'Given ')) + r.qty,
+        what: r.event === 'rejection' ? 'Rejection '+r.qty : r.event === 'rejection_reversed' ? 'Rejection reversed '+r.qty : r.event === 'test' ? 'Test message' : (r.event === 'edited' ? 'Corrected to ' : r.event === 'deleted' ? 'Removed ' : (r.event === 'made' ? 'Made ' : 'Given ')) + r.qty,
         text: renderBody(r, {}) }))
     });
   } catch (e) {

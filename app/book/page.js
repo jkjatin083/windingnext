@@ -2,6 +2,7 @@
 // Admin Order Book - the book itself: open/done orders with progress bars
 // and the Issue sheet (give order quantity to a contractor).
 // Port of the live orderbook.html book tab + issue sheet.
+import Rejections from '../../components/rejections';
 import { useState } from 'react';
 import { useApi, postJson } from '../../components/store';
 import Nav from '../../components/nav';
@@ -110,7 +111,7 @@ export default function Book() {
           </div>
         </div>
       ) : null}
-      <Nav />
+      <Rejections/><Nav />
     </div>
   );
 }

@@ -2,6 +2,7 @@
 // Admin Entries: every entry of every app, with filters, edit (qty/date),
 // soft delete, and admin add (wound / given to Pandey ji).
 // Port of the live orderbook.html entries tab.
+import Rejections from '../../components/rejections';
 import { useState } from 'react';
 import { useApi, postJson } from '../../components/store';
 import Nav from '../../components/nav';
@@ -47,7 +48,7 @@ export default function EAdmin() {
   return (
     <div className="w">
       <Top date={dm(todayIST())} />
-      <h1>Entries</h1>
+      <h1>Entries</h1><Rejections admin showAdd={false} who={EF.who} stype={EF.type} from={EF.from} to={EF.to}/>
       <div style={{ textAlign: 'right', marginBottom: 10 }}>
         <button className="btn s" onClick={() => openSheet('add')}>+ Add entry</button>
       </div>
@@ -124,17 +125,17 @@ export default function EAdmin() {
         <div className="ov" onClick={e => { if (e.target === e.currentTarget) setSheet(null); }}>
           <div className="sheet" style={{ maxHeight: '92vh', overflow: 'auto' }}>
             <h3 style={{ margin: '0 0 4px' }}>Add entry</h3>
-            <div style={{ color: 'var(--mute)', fontSize: 12.5 }}>Admin only. Made or Given to Pandey ji.</div>
+            <div style={{ color: 'var(--mute)', fontSize: 12.5 }}>Admin only. Made, Given to Pandey ji, or Rejection.</div>
             <label className="l">Contractor</label>
             <select className="sel" style={{ marginBottom: 0 }} value={ae.contractor} onChange={e => setAe({ ...ae, contractor: e.target.value, issue_id: null, opening_name: null })}>
               <option value="">Select contractor</option>
               {P.contractors.map(x => <option key={x} value={x}>{x}</option>)}
             </select>
             <label className="l">Entry type</label>
-            <select className="sel" style={{ marginBottom: 0 }} value={ae.entry} onChange={e => setAe({ ...ae, entry: e.target.value })}>
+            <select className="sel" style={{ marginBottom: 0 }} value={ae.entry} onChange={e => {if(e.target.value==='rejection'){setSheet(null);window.dispatchEvent(new Event('open-rejection'));}else setAe({ ...ae, entry: e.target.value });}}>
               <option value="">Select type</option>
               <option value="made">Made</option>
-              <option value="given">Given to Pandey ji</option>
+              <option value="given">Given to Pandey ji</option><option value="rejection">Rejection</option>
             </select>
             <label className="l">Stators</label>
             <div>
